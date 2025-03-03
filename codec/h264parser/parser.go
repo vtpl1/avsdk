@@ -49,19 +49,22 @@ From: http://stackoverflow.com/questions/24884827/possible-locations-for-sequenc
 
 First off, it's important to understand that there is no single standard H.264 elementary bitstream format.
 The specification document does contain an Annex, specifically Annex B, that describes one possible format,
-but it is not an actual requirement. The standard specifies how video is encoded into individual packets. How these packets are stored and transmitted is left open to the integrator.
+but it is not an actual requirement. The standard specifies how video is encoded into individual packets.
+How these packets are stored and transmitted is left open to the integrator.
 
 1. Annex B
 Network Abstraction Layer Units
 The packets are called Network Abstraction Layer Units. Often abbreviated NALU (or sometimes just NAL) each packet can be individually parsed and processed.
-The first byte of each NALU contains the NALU type, specifically bits 3 through 7. (bit 0 is always off, and bits 1-2 indicate whether a NALU is referenced by another NALU).
+The first byte of each NALU contains the NALU type, specifically bits 3 through 7. (bit 0 is always off, and bits 1-2 indicate whether a NALU is referenced
+by another NALU).
 
 There are 19 different NALU types defined separated into two categories, VCL and non-VCL:
 
 VCL, or Video Coding Layer packets contain the actual visual information.
 Non-VCLs contain metadata that may or may not be required to decode the video.
 A single NALU, or even a VCL NALU is NOT the same thing as a frame. A frame can be ‘sliced’ into several NALUs. Just like you can slice a pizza.
-One or more slices are then virtually grouped into a Access Units (AU) that contain one frame. Slicing does come at a slight quality cost, so it is not often used.
+One or more slices are then virtually grouped into a Access Units (AU) that contain one frame. Slicing does come at a slight quality cost, so it is not
+often used.
 
 Below is a table of all defined NALUs.
 
@@ -91,19 +94,25 @@ Below is a table of all defined NALUs.
 There are a couple of NALU types where having knowledge of may be helpful later.
 
 Sequence Parameter Set (SPS). This non-VCL NALU contains information required to configure the decoder such as profile, level, resolution, frame rate.
-Picture Parameter Set (PPS). Similar to the SPS, this non-VCL contains information on entropy coding mode, slice groups, motion prediction and deblocking filters.
-Instantaneous Decoder Refresh (IDR). This VCL NALU is a s contained image slice. That is, an IDR can be decoded and displayed without referencing any other NALU save SPS and PPS.
+Picture Parameter Set (PPS). Similar to the SPS, this non-VCL contains information on entropy coding mode, slice groups, motion prediction and deblocking
+filters.
+Instantaneous Decoder Refresh (IDR). This VCL NALU is a s contained image slice. That is, an IDR can be decoded and displayed without referencing any other
+NALU save SPS and PPS.
 Access Unit Delimiter (AUD). An AUD is an optional NALU that can be use to delimit frames in an elementary stream.
 It is not required (unless otherwise stated by the container/protocol, like TS), and is often not included in order to save space,
 but it can be useful to finds the start of a frame without having to fully parse each NALU.
 NALU Start Codes
-A NALU does not contain is its size. Therefore simply concatenating the NALUs to create a stream will not work because you will not know where one stops and the next begins.
+A NALU does not contain is its size. Therefore simply concatenating the NALUs to create a stream will not work because you will not know where one stops and
+the next begins.
 
-The Annex B specification solves this by requiring ‘Start Codes’ to precede each NALU. A start code is 2 or 3 0x00 bytes followed with a 0x01 byte. e.g. 0x000001 or 0x00000001.
+The Annex B specification solves this by requiring ‘Start Codes’ to precede each NALU. A start code is 2 or 3 0x00 bytes followed with a 0x01 byte.
+e.g. 0x000001 or 0x00000001.
 
-The 4 byte variation is useful for transmission over a serial connection as it is trivial to byte align the stream by looking for 31 zero bits followed by a one.
+The 4 byte variation is useful for transmission over a serial connection as it is trivial to byte align the stream by looking for 31 zero bits followed by a
+one.
 If the next bit is 0 (because every NALU starts with a 0 bit), it is the start of a NALU.
-The 4 byte variation is usually only used for signalling random access points in the stream such as a SPS PPS AUD and IDR Where as the 3 byte variation is used everywhere else to save space.
+The 4 byte variation is usually only used for signalling random access points in the stream such as a SPS PPS AUD and IDR Where as the 3 byte variation is
+used everywhere else to save space.
 
 Emulation Prevention Bytes
 Start codes work because the four byte sequences 0x000000, 0x000001, 0x000002 and 0x000003 are illegal within a non-RBSP NALU.
@@ -111,7 +120,8 @@ So when creating a NALU, care is taken to escape these values that could otherwi
 This is accomplished by inserting an ‘Emulation Prevention’ byte 0x03, so that 0x000001 becomes 0x00000301.
 
 When decoding, it is important to look for and ignore emulation prevention bytes.
-Because emulation prevention bytes can occur almost anywhere within a NALU, it is often more convenient in documentation to assume they have already been removed.
+Because emulation prevention bytes can occur almost anywhere within a NALU, it is often more convenient in documentation to assume they have already been
+removed.
 A representation without emulation prevention bytes is called Raw Byte Sequence Payload (RBSP).
 
 Example
@@ -202,9 +212,12 @@ You will notice SPS and PPS is now stored out of band. That is, separate from th
 Storage and transmission of this data is the job of the file container, and beyond the scope of this document.
 Notice that even though we are not using start codes, emulation prevention bytes are still inserted.
 
-Additionally, there is a new variable called NALULengthSizeMinusOne. This confusingly named variable tells us how many bytes to use to store the length of each NALU.
-So, if NALULengthSizeMinusOne is set to 0, then each NALU is preceded with a single byte indicating its length. Using a single byte to store the size, the max size of a NALU is 255 bytes.
-That is obviously pretty small. Way too small for an entire key frame. Using 2 bytes gives us 64k per NALU. It would work in our example, but is still a pretty low limit.
+Additionally, there is a new variable called NALULengthSizeMinusOne. This confusingly named variable tells us how many bytes to use to store the length of
+each NALU.
+So, if NALULengthSizeMinusOne is set to 0, then each NALU is preceded with a single byte indicating its length. Using a single byte to store the size, the
+max size of a NALU is 255 bytes.
+That is obviously pretty small. Way too small for an entire key frame. Using 2 bytes gives us 64k per NALU. It would work in our example, but is still a
+pretty low limit.
 3 bytes would be perfect, but for some reason is not universally supported. Therefore, 4 bytes is by far the most common, and it is what we used here:
 
 0x0000 | 00 00 02 41 65 88 81 00 05 4E 7F 87 DF 61 A5 8B
@@ -246,7 +259,8 @@ That is obviously pretty small. Way too small for an entire key frame. Using 2 b
 0x0240 | 6C BB C5 4E F3
 
 An advantage to this format is the ability to configure the decoder at the start and jump into the middle of a stream.
-This is a common use case where the media is available on a random access medium such as a hard drive, and is therefore used in common container formats such as MP4 and MKV.
+This is a common use case where the media is available on a random access medium such as a hard drive,
+and is therefore used in common container formats such as MP4 and MKV.
 */
 
 var (
@@ -395,7 +409,7 @@ func RemoveH264orH265EmulationBytes(b []byte) []byte {
 	return r[:j]
 }
 
-//nolint:gocyclo,cyclop,funlen,gocognit
+//nolint:gocyclo,cyclop,funlen,gocognit,maintidx
 func ParseSPS(data []byte) (SPSInfo, error) {
 	data = RemoveH264orH265EmulationBytes(data)
 	r := &bits.GolombBitReader{R: bytes.NewReader(data)}

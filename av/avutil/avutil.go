@@ -91,7 +91,7 @@ func (handlers *Handlers) Add(fn func(*RegisterHandler)) {
 	handlers.handlers = append(handlers.handlers, *handler)
 }
 
-func (handlers *Handlers) openURL(u *url.URL, uri string) (io.ReadCloser, error) {
+func (handlers *Handlers) openURL(u *url.URL, uri string) (io.ReadCloser, error) { //nolint:unparam
 	if u != nil && u.Scheme != "" {
 		for _, handler := range handlers.handlers {
 			if handler.URLReader != nil {
@@ -135,29 +135,38 @@ func (handlers *Handlers) createURL(uri string) (io.WriteCloser, error) {
 // 	return
 // }
 
-func (handlers *Handlers) Open(uri string) (demuxer av.DemuxCloser, err error) {
+func (handlers *Handlers) Open(uri string) (av.DemuxCloser, error) {
 	listen := false
 
 	if strings.HasPrefix(uri, "listen:") {
 		uri = uri[len("listen:"):]
 		listen = true
 	}
-
 	for _, handler := range handlers.handlers {
 		if listen {
-			if handler.ServerDemuxer != nil {
-				var ok bool
-				if ok, demuxer, err = handler.ServerDemuxer(uri); ok {
-					return demuxer, err
-				}
+			if handler.ServerDemuxer == nil {
+				continue
 			}
-		} else {
-			if handler.URLDemuxer != nil {
-				var ok bool
-				if ok, demuxer, err = handler.URLDemuxer(uri); ok {
-					return demuxer, err
-				}
+
+			ok, demuxer, err := handler.ServerDemuxer(uri)
+			if !ok {
+				continue
 			}
+
+			return demuxer, err
+		}
+
+		if handler.URLDemuxer == nil {
+			continue
+		}
+
+		if handler.URLDemuxer != nil {
+			ok, demuxer, err := handler.URLDemuxer(uri)
+			if !ok {
+				continue
+			}
+
+			return demuxer, err
 		}
 	}
 
@@ -171,34 +180,34 @@ func (handlers *Handlers) Open(uri string) (demuxer av.DemuxCloser, err error) {
 	} else {
 		ext = path.Ext(uri)
 	}
+	if ext == "" {
+		return nil, ErrOpenURLFailed
+	}
 
-	if ext != "" {
-		for _, handler := range handlers.handlers {
-			if handler.Ext == ext {
-				if handler.ReaderDemuxer != nil {
-					if r, err = handlers.openURL(u, uri); err != nil {
-						return demuxer, err
-					}
-
-					demuxer = &HandlerDemuxer{
-						Demuxer: handler.ReaderDemuxer(r),
-						r:       r,
-					}
-
-					return demuxer, err
+	for _, handler := range handlers.handlers {
+		if handler.Ext == ext {
+			if handler.ReaderDemuxer != nil {
+				if _, err := handlers.openURL(u, uri); err != nil {
+					return nil, err
 				}
+
+				demuxer := &HandlerDemuxer{
+					Demuxer: handler.ReaderDemuxer(r),
+					r:       r,
+				}
+
+				return demuxer, nil
 			}
 		}
 	}
-
 	var probebuf [1024]byte
 
-	if r, err = handlers.openURL(u, uri); err != nil {
-		return demuxer, err
+	if _, err := handlers.openURL(u, uri); err != nil {
+		return nil, err
 	}
 
-	if _, err = io.ReadFull(r, probebuf[:]); err != nil {
-		return demuxer, err
+	if _, err := io.ReadFull(r, probebuf[:]); err != nil {
+		return nil, err
 	}
 
 	for _, handler := range handlers.handlers {
@@ -206,8 +215,8 @@ func (handlers *Handlers) Open(uri string) (demuxer av.DemuxCloser, err error) {
 			var _r io.Reader
 
 			if rs, ok := r.(io.ReadSeeker); ok {
-				if _, err = rs.Seek(0, 0); err != nil {
-					return demuxer, err
+				if _, err := rs.Seek(0, 0); err != nil {
+					return nil, err
 				}
 
 				_r = rs
@@ -215,29 +224,27 @@ func (handlers *Handlers) Open(uri string) (demuxer av.DemuxCloser, err error) {
 				_r = io.MultiReader(bytes.NewReader(probebuf[:]), r)
 			}
 
-			demuxer = &HandlerDemuxer{
+			demuxer := &HandlerDemuxer{
 				Demuxer: handler.ReaderDemuxer(_r),
 				r:       r,
 			}
 
-			return demuxer, err
+			return demuxer, nil
 		}
 	}
 
-	r.Close()
+	// r.Close()
 
-	err = ErrOpenURLFailed
-
-	return demuxer, err
+	return nil, ErrOpenURLFailed
 }
 
-func (handlers *Handlers) Create(uri string) (muxer av.MuxCloser, err error) {
-	_, muxer, err = handlers.FindCreate(uri)
+func (handlers *Handlers) Create(uri string) (av.MuxCloser, error) {
+	_, muxer, err := handlers.FindCreate(uri)
 
-	return
+	return muxer, err
 }
 
-func (handlers *Handlers) FindCreate(uri string) (handler RegisterHandler, muxer av.MuxCloser, err error) {
+func (handlers *Handlers) FindCreate(uri string) (RegisterHandler, av.MuxCloser, error) {
 	listen := false
 
 	if strings.HasPrefix(uri, "listen:") {
@@ -245,7 +252,7 @@ func (handlers *Handlers) FindCreate(uri string) (handler RegisterHandler, muxer
 		listen = true
 	}
 
-	for _, handler = range handlers.handlers {
+	for _, handler := range handlers.handlers {
 		if listen {
 			if handler.ServerMuxer == nil {
 				continue
@@ -283,18 +290,17 @@ func (handlers *Handlers) FindCreate(uri string) (handler RegisterHandler, muxer
 	}
 
 	if ext == "" {
-		return handler, nil, ErrCreateMuxerFailed
+		return RegisterHandler{}, nil, ErrCreateMuxerFailed
 	}
 
-	for _, handler = range handlers.handlers {
+	for _, handler := range handlers.handlers {
 		if handler.Ext == ext && handler.WriterMuxer != nil {
-			var w io.WriteCloser
-
-			if w, err = handlers.createURL(uri); err != nil {
-				return handler, muxer, err
+			w, err := handlers.createURL(uri)
+			if err != nil {
+				return handler, nil, err
 			}
 
-			muxer = &HandlerMuxer{
+			muxer := &HandlerMuxer{
 				Muxer: handler.WriterMuxer(w),
 				w:     w,
 			}
@@ -303,16 +309,16 @@ func (handlers *Handlers) FindCreate(uri string) (handler RegisterHandler, muxer
 		}
 	}
 
-	return handler, muxer, ErrCreateMuxerFailed
+	return RegisterHandler{}, nil, ErrCreateMuxerFailed
 }
 
-var DefaultHandlers = &Handlers{}
+var DefaultHandlers = &Handlers{} //nolint:gochecknoglobals
 
-func Open(url string) (demuxer av.DemuxCloser, err error) {
+func Open(url string) (av.DemuxCloser, error) {
 	return DefaultHandlers.Open(url)
 }
 
-func Create(url string) (muxer av.MuxCloser, err error) {
+func Create(url string) (av.MuxCloser, error) {
 	return DefaultHandlers.Create(url)
 }
 

@@ -230,7 +230,7 @@ func SplitNALUs(b []byte) ([][]byte, NaluAvccOrAnnexb) {
 	return [][]byte{b}, NaluRaw
 }
 
-//nolint:gocognit,cyclop,funlen
+//nolint:gocyclo,cyclop,funlen
 func ParseSPS(sps []byte) (SPSInfo, error) {
 	var spsInfo SPSInfo
 

@@ -1,7 +1,7 @@
 run:
   timeout: 5m
   tests: false
-linters-settings:
+linters-settings:  
   cyclop:
     # The maximal code complexity to report.
     max-complexity: 30
@@ -20,12 +20,24 @@ linters-settings:
   funlen:
     # Checks the number of lines in a function.
     # If lower than 0, disable the check.
-    lines: 100
+    lines: 110
     # Checks the number of statements in a function.
     # If lower than 0, disable the check.
     statements: 70
     # Ignore comments when counting lines.
     ignore-comments: true
+  gocognit:
+    # Minimal code complexity to report.
+    min-complexity: 50
+  lll:
+    # Max line length, lines longer will be reported.
+    # '\t' is counted as 1 character by default, and can be changed with the tab-width option.
+    # Default: 120.
+    line-length: 160
+    # Tab width in spaces.
+    # Default: 1
+    tab-width: 1
+
 
 linters:
   enable:
@@ -82,7 +94,7 @@ linters:
     - interfacebloat  # A linter that checks the number of methods inside an interface. [fast]
     - intrange  # Intrange is a linter to find places where for loops could make use of an integer range. [auto-fix]
     # - ireturn  # Accept Interfaces, Return Concrete Types.
-    # - lll  # Reports long lines. [fast]
+    - lll  # Reports long lines. [fast]
     - loggercheck  # Checks key value pairs for common logger libraries (kitlog,klog,logr,zap).
     - maintidx  # Maintidx measures the maintainability index of each function. [fast]
     - makezero  # Finds slice declarations with non-zero initial length.
@@ -127,9 +139,9 @@ linters:
     - wastedassign  # Finds wasted assignment statements.
     - whitespace  # Whitespace is a linter that checks for unnecessary newlines at the start and end of functions, if, for, etc. [fast, auto-fix]
     # - wrapcheck  # Checks that errors returned from external packages are wrapped.
-    - wsl  # Add or remove empty lines. [fast, auto-fix]
     - zerologlint  # Detects the wrong usage of `zerolog` that a user forgets to dispatch with `Send` or `Msg`.
   disable:
     - exhaustruct  # Checks if all structure fields are initialized.
     - mnd  # An analyzer to detect magic numbers. [fast]
     - varnamelen  # Checks that the length of a variable's name matches its scope.
+    - wsl  # Add or remove empty lines. [fast, auto-fix]
