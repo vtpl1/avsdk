@@ -37,6 +37,20 @@ linters-settings:
     # Tab width in spaces.
     # Default: 1
     tab-width: 1
+  revive:
+    rules:
+      # https://github.com/mgechev/revive/blob/HEAD/RULES_DESCRIPTIONS.md#var-naming
+      - name: var-naming
+        severity: warning
+        disabled: false
+        exclude: [""]
+        arguments:
+          - ["ID"] # AllowList
+          - ["VM"] # DenyList
+          - - upperCaseConst: true # Extra parameter (upperCaseConst|skipPackageNameChecks)
+  stylecheck:
+    checks:
+      - ST1003
 
 
 linters:
@@ -145,3 +159,18 @@ linters:
     - mnd  # An analyzer to detect magic numbers. [fast]
     - varnamelen  # Checks that the length of a variable's name matches its scope.
     - wsl  # Add or remove empty lines. [fast, auto-fix]
+
+issues:
+  exclude-use-default: true
+  exclude-dirs-use-default: false
+  exclude-rules:
+    # Allow complex tests and examples, better to be self contained
+    - path: (codec/aacparser/parser.go)
+      linters:
+        - stylecheck
+    - path: (codec/h264parser/parser.go)
+      linters:
+        - stylecheck
+    - path: (codec/h265parser/parser.go)
+      linters:
+        - stylecheck

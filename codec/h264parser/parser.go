@@ -14,21 +14,49 @@ import (
 	"github.com/vtpl1/avsdk/utils/bits/pio"
 )
 
-type NaluAvccOrAnnexb int
+type NALUAvccOrAnnexb int
 
 const (
-	NaluRaw NaluAvccOrAnnexb = iota
-	NaluAvcc
-	NaluAnnexb
+	NALURaw NALUAvccOrAnnexb = iota
+	NALUAvcc
+	NALUAnnexb
 )
 
 type NaluType byte
 
 const (
-	NaluSei NaluType = 6
-	NaluSps NaluType = 7
-	NaluPps NaluType = 8
-	NaluAud NaluType = 9
+	H264_NAL_UNSPECIFIED       NaluType = iota // = 0
+	H264_NAL_SLICE                             // = 1
+	H264_NAL_DPA                               // = 2
+	H264_NAL_DPB                               // = 3
+	H264_NAL_DPC                               // = 4
+	H264_NAL_IDR_SLICE                         // = 5
+	H264_NAL_SEI                               // = 6
+	H264_NAL_SPS                               // = 7
+	H264_NAL_PPS                               // = 8
+	H264_NAL_AUD                               // = 9
+	H264_NAL_END_SEQUENCE                      // = 10,
+	H264_NAL_END_STREAM                        // = 11,
+	H264_NAL_FILLER_DATA                       // = 12,
+	H264_NAL_SPS_EXT                           // = 13,
+	H264_NAL_PREFIX                            // = 14,
+	H264_NAL_SUB_SPS                           // = 15,
+	H264_NAL_DPS                               // = 16,
+	H264_NAL_RESERVED17                        // = 17,
+	H264_NAL_RESERVED18                        // = 18,
+	H264_NAL_AUXILIARY_SLICE                   // = 19,
+	H264_NAL_EXTEN_SLICE                       // = 20,
+	H264_NAL_DEPTH_EXTEN_SLICE                 // = 21,
+	H264_NAL_RESERVED22                        // = 22,
+	H264_NAL_RESERVED23                        // = 23,
+	H264_NAL_UNSPECIFIED24                     // = 24,
+	H264_NAL_UNSPECIFIED25                     // = 25,
+	H264_NAL_UNSPECIFIED26                     // = 26,
+	H264_NAL_UNSPECIFIED27                     // = 27,
+	H264_NAL_UNSPECIFIED28                     // = 28,
+	H264_NAL_UNSPECIFIED29                     // = 29,
+	H264_NAL_UNSPECIFIED30                     // = 30,
+	H264_NAL_UNSPECIFIED31                     // = 31,
 )
 
 const (
@@ -268,16 +296,16 @@ var (
 	AUDBytes       = []byte{0, 0, 0, 1, 0x9, 0xf0, 0, 0, 0, 1} //nolint:gochecknoglobals // AUD
 )
 
-func CheckNALUsType(b []byte) NaluAvccOrAnnexb {
+func CheckNALUsType(b []byte) NALUAvccOrAnnexb {
 	_, typ := SplitNALUs(b)
 
 	return typ
 }
 
 //nolint:gocognit
-func SplitNALUs(b []byte) ([][]byte, NaluAvccOrAnnexb) {
+func SplitNALUs(b []byte) ([][]byte, NALUAvccOrAnnexb) {
 	if len(b) < minimumNALULength {
-		return [][]byte{b}, NaluRaw
+		return [][]byte{b}, NALURaw
 	}
 
 	var nalus [][]byte
@@ -312,7 +340,7 @@ func SplitNALUs(b []byte) ([][]byte, NaluAvccOrAnnexb) {
 		}
 
 		if len(_b) == 0 {
-			return nalus, NaluAvcc
+			return nalus, NALUAvcc
 		}
 	}
 
@@ -363,10 +391,10 @@ func SplitNALUs(b []byte) ([][]byte, NaluAvccOrAnnexb) {
 			}
 		}
 
-		return nalus, NaluAnnexb
+		return nalus, NALUAnnexb
 	}
 
-	return [][]byte{b}, NaluRaw
+	return [][]byte{b}, NALURaw
 }
 
 type SPSInfo struct {

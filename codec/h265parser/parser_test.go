@@ -1,11 +1,10 @@
-// Package h264parser holds Muxer and Demuxer for h264
-package h264parser_test
+package h265parser_test
 
 import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/vtpl1/avsdk/codec/h264parser"
+	"github.com/vtpl1/avsdk/codec/h265parser"
 )
 
 func TestSplitNALUs(t *testing.T) {
@@ -18,22 +17,22 @@ func TestSplitNALUs(t *testing.T) {
 		name      string
 		b         []byte
 		wantNalus [][]byte
-		wantTyp   h264parser.NALUAvccOrAnnexb
+		wantTyp   h265parser.NALUAvccOrAnnexb
 	}{
 		{
 			name:    "annexbFrame",
 			b:       annexbFrame,
-			wantTyp: h264parser.NALUAnnexb,
+			wantTyp: h265parser.NALUAnnexb,
 		},
 		{
 			name:    "avccFrame",
 			b:       avccFrame,
-			wantTyp: h264parser.NALUAvcc,
+			wantTyp: h265parser.NALUAvcc,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotNalus, gotTyp := h264parser.SplitNALUs(tt.b)
+			gotNalus, gotTyp := h265parser.SplitNALUs(tt.b)
 			t.Logf("SplitNALUs() gotNalus = %v", gotNalus)
 			if gotTyp != tt.wantTyp {
 				t.Errorf("SplitNALUs() gotTyp = %v, want %v", gotTyp, tt.wantTyp)

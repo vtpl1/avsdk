@@ -21,48 +21,51 @@ var (
 
 // copied from libavcodec/mpeg4audio.h.
 const (
-	AotAacMain       = 1 + iota  ///< Y                       Main
-	AotAacLc                     ///< Y                       Low Complexity
-	AotAacSsr                    ///< N (code in SoC repo)    Scalable Sample Rate
-	AotAacLtp                    ///< Y                       Long Term Prediction
-	AotSbr                       ///< Y                       Spectral Band Replication
-	AotAacScalable               ///< N                       Scalable
-	AotTwinvq                    ///< N                       Twin Vector Quantizer
-	AotCelp                      ///< N                       Code Excited Linear Prediction
-	AotHvxc                      ///< N                       Harmonic Vector eXcitation Coding
-	AotTtsi          = 12 + iota ///< N                       Text-To-Speech Interface
-	AotMainsynth                 ///< N                       Main Synthesis
-	AotWavesynth                 ///< N                       Wavetable Synthesis
-	AotMidi                      ///< N                       General MIDI
-	AotSafx                      ///< N                       Algorithmic Synthesis and Audio Effects
-	AotErAacLc                   ///< N                       Error Resilient Low Complexity
-	AotErAacLtp      = 19 + iota ///< N                       Error Resilient Long Term Prediction
-	AotErAacScalable             ///< N                       Error Resilient Scalable
-	AotErTwinvq                  ///< N                       Error Resilient Twin Vector Quantizer
-	AotErBsac                    ///< N                       Error Resilient Bit-Sliced Arithmetic Coding
-	AotErAacLd                   ///< N                       Error Resilient Low Delay
-	AotErCelp                    ///< N                       Error Resilient Code Excited Linear Prediction
-	AotErHvxc                    ///< N                       Error Resilient Harmonic Vector eXcitation Coding
-	AotErHiln                    ///< N                       Error Resilient Harmonic and Individual Lines plus Noise
-	AotErParam                   ///< N                       Error Resilient Parametric
-	AotSsc                       ///< N                       SinuSoidal Coding
-	AotPs                        ///< N                       Parametric Stereo
-	AotSurround                  ///< N                       MPEG Surround
-	AotEscape                    ///< Y                       Escape Value
-	AotL1                        ///< Y                       Layer 1
-	AotL2                        ///< Y                       Layer 2
-	AotL3                        ///< Y                       Layer 3
-	AotDst                       ///< N                       Direct Stream Transfer
-	AotAls                       ///< Y                       Audio LosslesS
-	AotSls                       ///< N                       Scalable LosslesS
-	AotSlsNonCore                ///< N                       Scalable LosslesS (non core)
-	AotErAacEld                  ///< N                       Error Resilient Enhanced Low Delay
-	AotSmrSimple                 ///< N                       Symbolic Music Representation Simple
-	AotSmrMain                   ///< N                       Symbolic Music Representation Main
-	AotUsacNosbr                 ///< N                       Unified Speech and Audio Coding (no SBR)
-	AotSaoc                      ///< N                       Spatial Audio Object Coding
-	AotLdSurround                ///< N                       Low Delay MPEG Surround
-	AotUsac                      ///< N                       Unified Speech and Audio Coding
+	AOT_NULL            = iota // = 0,// Support?         	         Name.
+	AOT_AAC_MAIN               // =  1, ///< Y                       Main
+	AOT_AAC_LC                 // =  2, ///< Y                       Low Complexity
+	AOT_AAC_SSR                // =  3, ///< N (code in SoC repo)    Scalable Sample Rate
+	AOT_AAC_LTP                // =  4, ///< Y                       Long Term Prediction
+	AOT_SBR                    // =  5, ///< Y                       Spectral Band Replication
+	AOT_AAC_SCALABLE           // =  6, ///< N                       Scalable
+	AOT_TWINVQ                 // =  7, ///< N                       Twin Vector Quantizer
+	AOT_CELP                   // =  8, ///< N                       Code Excited Linear Prediction
+	AOT_HVXC                   // =  9, ///< N                       Harmonic Vector eXcitation Coding
+	AOT_UNDEFINED10            // = 10
+	AOT_UNDEFINED11            // = 11
+	AOT_TTSI                   // = 12, ///< N                       Text-To-Speech Interface
+	AOT_MAINSYNTH              // = 13, ///< N                       Main Synthesis
+	AOT_WAVESYNTH              // = 14, ///< N                       Wavetable Synthesis
+	AOT_MIDI                   // = 15, ///< N                       General MIDI
+	AOT_SAFX                   // = 16, ///< N                       Algorithmic Synthesis and Audio Effects
+	AOT_ER_AAC_LC              // = 17, ///< N                       Error Resilient Low Complexity
+	AOT_UNDEFINED18            // = 18
+	AOT_ER_AAC_LTP             // = 19, ///< N                       Error Resilient Long Term Prediction
+	AOT_ER_AAC_SCALABLE        // = 20, ///< N                       Error Resilient Scalable
+	AOT_ER_TWINVQ              // = 21, ///< N                       Error Resilient Twin Vector Quantizer
+	AOT_ER_BSAC                // = 22, ///< N                       Error Resilient Bit-Sliced Arithmetic Coding
+	AOT_ER_AAC_LD              // = 23, ///< N                       Error Resilient Low Delay
+	AOT_ER_CELP                // = 24, ///< N                       Error Resilient Code Excited Linear Prediction
+	AOT_ER_HVXC                // = 25, ///< N                       Error Resilient Harmonic Vector eXcitation Coding
+	AOT_ER_HILN                // = 26, ///< N                       Error Resilient Harmonic and Individual Lines plus Noise
+	AOT_ER_PARAM               // = 27, ///< N                       Error Resilient Parametric
+	AOT_SSC                    // = 28, ///< N                       SinuSoidal Coding
+	AOT_PS                     // = 29, ///< N                       Parametric Stereo
+	AOT_SURROUND               // = 30, ///< N                       MPEG Surround
+	AOT_ESCAPE                 // = 31, ///< Y                       Escape Value
+	AOT_L1                     // = 32, ///< Y                       Layer 1
+	AOT_L2                     // = 33, ///< Y                       Layer 2
+	AOT_L3                     // = 34, ///< Y                       Layer 3
+	AOT_DST                    // = 35, ///< N                       Direct Stream Transfer
+	AOT_ALS                    // = 36, ///< Y                       Audio LosslesS
+	AOT_SLS                    // = 37, ///< N                       Scalable LosslesS
+	AOT_SLS_NON_CORE           // = 38, ///< N                       Scalable LosslesS (non core)
+	AOT_ER_AAC_ELD             // = 39, ///< N                       Error Resilient Enhanced Low Delay
+	AOT_SMR_SIMPLE             // = 40, ///< N                       Symbolic Music Representation Simple
+	AOT_SMR_MAIN               // = 41, ///< N                       Symbolic Music Representation Main
+	AOT_USAC                   // = 42, ///< Y                       Unified Speech and Audio Coding
+	AOT_SAOC                   // = 43, ///< N                       Spatial Audio Object Coding
+	AOT_LD_SURROUND            // = 44, ///< N                       Low Delay MPEG Surround
 )
 
 type MPEG4AudioConfig struct {
@@ -171,7 +174,7 @@ func readObjectType(r *bits.Reader) (uint, error) {
 		return objectType, err
 	}
 
-	if objectType == AotEscape {
+	if objectType == AOT_ESCAPE {
 		var i uint
 
 		if i, err = r.ReadBits(6); err != nil {
@@ -186,7 +189,7 @@ func readObjectType(r *bits.Reader) (uint, error) {
 
 func writeObjectType(w *bits.Writer, objectType uint) error {
 	if objectType >= 32 {
-		if err := w.WriteBits(AotEscape, 5); err != nil {
+		if err := w.WriteBits(AOT_ESCAPE, 5); err != nil {
 			return err
 		}
 
