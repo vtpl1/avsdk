@@ -317,7 +317,7 @@ func SplitNALUs(b []byte) ([][]byte, NALUAvccOrAnnexb) {
 	if val4 <= uint32(len(b)) {
 		_val4 := val4
 		_b := b[4:]
-		nalus = [][]byte{}
+		nalus := [][]byte{}
 
 		for {
 			if _val4 > uint32(len(_b)) {
