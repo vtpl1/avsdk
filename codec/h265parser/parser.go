@@ -110,6 +110,7 @@ const (
 )
 
 const (
+	NALUMask     = 0x1F
 	MaxVpsCount  = 16
 	MaxSubLayers = 7
 	MaxSpsCount  = 32
@@ -119,6 +120,24 @@ func IsDataNALU(b []byte) bool {
 	typ := b[0] & 0x1f
 
 	return typ >= 1 && typ <= 5
+}
+
+func IsSPSNALU(b []byte) bool {
+	typ := b[0] & NALUMask
+
+	return typ == byte(HEVC_NAL_SPS)
+}
+
+func IsPPSNALU(b []byte) bool {
+	typ := b[0] & NALUMask
+
+	return typ == byte(HEVC_NAL_PPS)
+}
+
+func IsVPSNALU(b []byte) bool {
+	typ := b[0] & NALUMask
+
+	return typ == byte(HEVC_NAL_VPS)
 }
 
 var (

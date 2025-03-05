@@ -71,6 +71,18 @@ func IsDataNALU(b []byte) bool {
 	return typ >= 1 && typ <= 5
 }
 
+func IsSPSNALU(b []byte) bool {
+	typ := b[0] & NALUMask
+
+	return typ == byte(H264_NAL_SPS)
+}
+
+func IsPPSNALU(b []byte) bool {
+	typ := b[0] & NALUMask
+
+	return typ == byte(H264_NAL_PPS)
+}
+
 //nolint:dupword
 /*
 From: http://stackoverflow.com/questions/24884827/possible-locations-for-sequence-picture-parameter-sets-for-h-264-stream
