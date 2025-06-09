@@ -10,77 +10,29 @@ import (
 	"time"
 
 	"github.com/vtpl1/avsdk/av"
+	"github.com/vtpl1/avsdk/codec/parser"
 	"github.com/vtpl1/avsdk/utils/bits"
 	"github.com/vtpl1/avsdk/utils/bits/pio"
 )
 
-type NALUAvccOrAnnexb int
-
-const (
-	NALURaw NALUAvccOrAnnexb = iota
-	NALUAvcc
-	NALUAnnexb
-)
-
-type NaluType byte
-
-const (
-	H264_NAL_UNSPECIFIED       NaluType = iota // = 0
-	H264_NAL_SLICE                             // = 1
-	H264_NAL_DPA                               // = 2
-	H264_NAL_DPB                               // = 3
-	H264_NAL_DPC                               // = 4
-	H264_NAL_IDR_SLICE                         // = 5
-	H264_NAL_SEI                               // = 6
-	H264_NAL_SPS                               // = 7
-	H264_NAL_PPS                               // = 8
-	H264_NAL_AUD                               // = 9
-	H264_NAL_END_SEQUENCE                      // = 10,
-	H264_NAL_END_STREAM                        // = 11,
-	H264_NAL_FILLER_DATA                       // = 12,
-	H264_NAL_SPS_EXT                           // = 13,
-	H264_NAL_PREFIX                            // = 14,
-	H264_NAL_SUB_SPS                           // = 15,
-	H264_NAL_DPS                               // = 16,
-	H264_NAL_RESERVED17                        // = 17,
-	H264_NAL_RESERVED18                        // = 18,
-	H264_NAL_AUXILIARY_SLICE                   // = 19,
-	H264_NAL_EXTEN_SLICE                       // = 20,
-	H264_NAL_DEPTH_EXTEN_SLICE                 // = 21,
-	H264_NAL_RESERVED22                        // = 22,
-	H264_NAL_RESERVED23                        // = 23,
-	H264_NAL_UNSPECIFIED24                     // = 24,
-	H264_NAL_UNSPECIFIED25                     // = 25,
-	H264_NAL_UNSPECIFIED26                     // = 26,
-	H264_NAL_UNSPECIFIED27                     // = 27,
-	H264_NAL_UNSPECIFIED28                     // = 28,
-	H264_NAL_UNSPECIFIED29                     // = 29,
-	H264_NAL_UNSPECIFIED30                     // = 30,
-	H264_NAL_UNSPECIFIED31                     // = 31,
-)
-
-const (
-	NALUMask          = 0x1F
-	minimumNALULength = 4
-	bitsInByte        = 8
-)
+const bitsInByte = 8
 
 func IsDataNALU(b []byte) bool {
-	typ := b[0] & NALUMask
+	typ := b[0] & parser.Last9BbitsNALUMask
 
 	return typ >= 1 && typ <= 5
 }
 
 func IsSPSNALU(b []byte) bool {
-	typ := b[0] & NALUMask
+	typ := b[0] & parser.Last9BbitsNALUMask
 
-	return typ == byte(H264_NAL_SPS)
+	return typ == byte(parser.H264_NAL_SPS)
 }
 
 func IsPPSNALU(b []byte) bool {
-	typ := b[0] & NALUMask
+	typ := b[0] & parser.Last9BbitsNALUMask
 
-	return typ == byte(H264_NAL_PPS)
+	return typ == byte(parser.H264_NAL_PPS)
 }
 
 //nolint:dupword
@@ -308,105 +260,10 @@ var (
 	AUDBytes       = []byte{0, 0, 0, 1, 0x9, 0xf0, 0, 0, 0, 1} //nolint:gochecknoglobals // AUD
 )
 
-func CheckNALUsType(b []byte) NALUAvccOrAnnexb {
-	_, typ := SplitNALUs(b)
+func CheckNALUsType(b []byte) parser.NALUAvccOrAnnexb {
+	_, typ := parser.SplitNALUs(b)
 
 	return typ
-}
-
-//nolint:gocognit
-func SplitNALUs(b []byte) ([][]byte, NALUAvccOrAnnexb) {
-	if len(b) < minimumNALULength {
-		return [][]byte{b}, NALURaw
-	}
-
-	var nalus [][]byte
-
-	val3 := pio.U24BE(b)
-	val4 := pio.U32BE(b)
-
-	// maybe AVCC
-	if val4 <= uint32(len(b)) {
-		_val4 := val4
-		_b := b[4:]
-		nalus := [][]byte{}
-
-		for {
-			if _val4 > uint32(len(_b)) {
-				break
-			}
-
-			nalus = append(nalus, _b[:_val4])
-
-			_b = _b[_val4:]
-			if len(_b) < minimumNALULength {
-				break
-			}
-
-			_val4 = pio.U32BE(_b)
-			_b = _b[4:]
-
-			if _val4 > uint32(len(_b)) {
-				break
-			}
-		}
-
-		if len(_b) == 0 {
-			return nalus, NALUAvcc
-		}
-	}
-
-	// is Annex B
-	if val3 == 1 || val4 == 1 {
-		_val3 := val3
-		_val4 := val4
-		start := 0
-		pos := 0
-
-		for {
-			if start != pos {
-				nalus = append(nalus, b[start:pos])
-			}
-
-			if _val3 == 1 {
-				pos += 3
-			} else if _val4 == 1 {
-				pos += 4
-			}
-
-			start = pos
-			if start == len(b) {
-				break
-			}
-
-			_val3 = 0
-			_val4 = 0
-
-			for pos < len(b) {
-				if pos+2 < len(b) && b[pos] == 0 {
-					_val3 = pio.U24BE(b[pos:])
-					if _val3 == 0 {
-						if pos+3 < len(b) {
-							_val4 = uint32(b[pos+3])
-							if _val4 == 1 {
-								break
-							}
-						}
-					} else if _val3 == 1 {
-						break
-					}
-
-					pos++
-				} else {
-					pos++
-				}
-			}
-		}
-
-		return nalus, NALUAnnexb
-	}
-
-	return [][]byte{b}, NALURaw
 }
 
 type SPSInfo struct {

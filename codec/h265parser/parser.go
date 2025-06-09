@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/vtpl1/avsdk/av"
+	"github.com/vtpl1/avsdk/codec/parser"
 	"github.com/vtpl1/avsdk/utils/bits"
 	"github.com/vtpl1/avsdk/utils/bits/pio"
 )
@@ -40,77 +41,7 @@ type SPSInfo struct {
 	fps                              uint
 }
 
-type NaluType int
-
 const (
-	HEVC_NAL_TRAIL_N        NaluType = iota // = 0
-	HEVC_NAL_TRAIL_R                        // = 1,
-	HEVC_NAL_TSA_N                          // = 2,
-	HEVC_NAL_TSA_R                          // = 3,
-	HEVC_NAL_STSA_N                         // = 4,
-	HEVC_NAL_STSA_R                         // = 5,
-	HEVC_NAL_RADL_N                         // = 6,
-	HEVC_NAL_RADL_R                         // = 7,
-	HEVC_NAL_RASL_N                         // = 8,
-	HEVC_NAL_RASL_R                         // = 9,
-	HEVC_NAL_VCL_N10                        // = 10,
-	HEVC_NAL_VCL_R11                        // = 11,
-	HEVC_NAL_VCL_N12                        // = 12,
-	HEVC_NAL_VCL_R13                        // = 13,
-	HEVC_NAL_VCL_N14                        // = 14,
-	HEVC_NAL_VCL_R15                        // = 15,
-	HEVC_NAL_BLA_W_LP                       // = 16,
-	HEVC_NAL_BLA_W_RADL                     // = 17,
-	HEVC_NAL_BLA_N_LP                       // = 18,
-	HEVC_NAL_IDR_W_RADL                     // = 19,
-	HEVC_NAL_IDR_N_LP                       // = 20,
-	HEVC_NAL_CRA_NUT                        // = 21,
-	HEVC_NAL_RSV_IRAP_VCL22                 // = 22,
-	HEVC_NAL_RSV_IRAP_VCL23                 // = 23,
-	HEVC_NAL_RSV_VCL24                      // = 24,
-	HEVC_NAL_RSV_VCL25                      // = 25,
-	HEVC_NAL_RSV_VCL26                      // = 26,
-	HEVC_NAL_RSV_VCL27                      // = 27,
-	HEVC_NAL_RSV_VCL28                      // = 28,
-	HEVC_NAL_RSV_VCL29                      // = 29,
-	HEVC_NAL_RSV_VCL30                      // = 30,
-	HEVC_NAL_RSV_VCL31                      // = 31,
-	HEVC_NAL_VPS                            // = 32,
-	HEVC_NAL_SPS                            // = 33,
-	HEVC_NAL_PPS                            // = 34,
-	HEVC_NAL_AUD                            // = 35,
-	HEVC_NAL_EOS_NUT                        // = 36,
-	HEVC_NAL_EOB_NUT                        // = 37,
-	HEVC_NAL_FD_NUT                         // = 38,
-	HEVC_NAL_SEI_PREFIX                     // = 39,
-	HEVC_NAL_SEI_SUFFIX                     // = 40,
-	HEVC_NAL_RSV_NVCL41                     // = 41,
-	HEVC_NAL_RSV_NVCL42                     // = 42,
-	HEVC_NAL_RSV_NVCL43                     // = 43,
-	HEVC_NAL_RSV_NVCL44                     // = 44,
-	HEVC_NAL_RSV_NVCL45                     // = 45,
-	HEVC_NAL_RSV_NVCL46                     // = 46,
-	HEVC_NAL_RSV_NVCL47                     // = 47,
-	HEVC_NAL_UNSPEC48                       // = 48,
-	HEVC_NAL_UNSPEC49                       // = 49,
-	HEVC_NAL_UNSPEC50                       // = 50,
-	HEVC_NAL_UNSPEC51                       // = 51,
-	HEVC_NAL_UNSPEC52                       // = 52,
-	HEVC_NAL_UNSPEC53                       // = 53,
-	HEVC_NAL_UNSPEC54                       // = 54,
-	HEVC_NAL_UNSPEC55                       // = 55,
-	HEVC_NAL_UNSPEC56                       // = 56,
-	HEVC_NAL_UNSPEC57                       // = 57,
-	HEVC_NAL_UNSPEC58                       // = 58,
-	HEVC_NAL_UNSPEC59                       // = 59,
-	HEVC_NAL_UNSPEC60                       // = 60,
-	HEVC_NAL_UNSPEC61                       // = 61,
-	HEVC_NAL_UNSPEC62                       // = 62,
-	HEVC_NAL_UNSPEC63                       // = 63,
-)
-
-const (
-	NALUMask     = 0x1F
 	MaxVpsCount  = 16
 	MaxSubLayers = 7
 	MaxSpsCount  = 32
@@ -122,130 +53,30 @@ func IsDataNALU(b []byte) bool {
 	return typ >= 1 && typ <= 5
 }
 
-func IsSPSNALU(b []byte) bool {
-	typ := b[0] & NALUMask
+func IsSPSNALU(nalHeader []byte) bool {
+	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
 
-	return typ == byte(HEVC_NAL_SPS)
+	return typ == byte(parser.HEVC_NAL_SPS)
 }
 
-func IsPPSNALU(b []byte) bool {
-	typ := b[0] & NALUMask
+func IsPPSNALU(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last10BbitsNALUMask
 
-	return typ == byte(HEVC_NAL_PPS)
+	return typ == byte(parser.HEVC_NAL_PPS)
 }
 
-func IsVPSNALU(b []byte) bool {
-	typ := b[0] & NALUMask
+func IsVPSNALU(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last10BbitsNALUMask
 
-	return typ == byte(HEVC_NAL_VPS)
+	return typ == byte(parser.HEVC_NAL_VPS)
 }
 
-var (
-	StartCodeBytes = []byte{0, 0, 1}                           //nolint:gochecknoglobals
-	AUDBytes       = []byte{0, 0, 0, 1, 0x9, 0xf0, 0, 0, 0, 1} //nolint:gochecknoglobals // AUD
-)
+var AUDBytes = []byte{0, 0, 0, 1, 0x9, 0xf0, 0, 0, 0, 1} //nolint:gochecknoglobals // AUD
 
-func CheckNALUsType(b []byte) NALUAvccOrAnnexb {
-	_, typ := SplitNALUs(b)
+func CheckNALUsType(b []byte) parser.NALUAvccOrAnnexb {
+	_, typ := parser.SplitNALUs(b)
 
 	return typ
-}
-
-type NALUAvccOrAnnexb int
-
-const (
-	NALURaw NALUAvccOrAnnexb = iota
-	NALUAvcc
-	NALUAnnexb
-)
-
-//nolint:gocognit
-func SplitNALUs(b []byte) ([][]byte, NALUAvccOrAnnexb) {
-	var nalus [][]byte
-
-	if len(b) < 4 {
-		return [][]byte{b}, NALURaw
-	}
-
-	val3 := pio.U24BE(b)
-
-	val4 := pio.U32BE(b)
-	if val4 <= uint32(len(b)) {
-		_val4 := val4
-		_b := b[4:]
-		nalus = [][]byte{}
-
-		for {
-			nalus = append(nalus, _b[:_val4])
-
-			_b = _b[_val4:]
-			if len(_b) < 4 {
-				break
-			}
-
-			_val4 = pio.U32BE(_b)
-			_b = _b[4:]
-
-			if _val4 > uint32(len(_b)) {
-				break
-			}
-		}
-
-		if len(_b) == 0 {
-			return nalus, NALUAvcc
-		}
-	}
-
-	if val3 == 1 || val4 == 1 {
-		_val3 := val3
-		_val4 := val4
-		start := 0
-		pos := 0
-
-		for {
-			if start != pos {
-				nalus = append(nalus, b[start:pos])
-			}
-
-			if _val3 == 1 {
-				pos += 3
-			} else if _val4 == 1 {
-				pos += 4
-			}
-
-			start = pos
-			if start == len(b) {
-				break
-			}
-
-			_val3 = 0
-			_val4 = 0
-
-			for pos < len(b) {
-				if pos+2 < len(b) && b[pos] == 0 {
-					_val3 = pio.U24BE(b[pos:])
-					if _val3 == 0 {
-						if pos+3 < len(b) {
-							_val4 = uint32(b[pos+3])
-							if _val4 == 1 {
-								break
-							}
-						}
-					} else if _val3 == 1 {
-						break
-					}
-
-					pos++
-				} else {
-					pos++
-				}
-			}
-		}
-
-		return nalus, NALUAnnexb
-	}
-
-	return [][]byte{b}, NALURaw
 }
 
 //nolint:gocyclo,cyclop,funlen
