@@ -17,20 +17,20 @@ import (
 
 const bitsInByte = 8
 
-func IsDataNALU(b []byte) bool {
-	typ := b[0] & parser.Last9BbitsNALUMask
+func IsDataNALU(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last9BbitsNALUMask
 
 	return typ >= 1 && typ <= 5
 }
 
-func IsSPSNALU(b []byte) bool {
-	typ := b[0] & parser.Last9BbitsNALUMask
+func IsSPSNALU(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last9BbitsNALUMask
 
 	return typ == byte(parser.H264_NAL_SPS)
 }
 
-func IsPPSNALU(b []byte) bool {
-	typ := b[0] & parser.Last9BbitsNALUMask
+func IsPPSNALU(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last9BbitsNALUMask
 
 	return typ == byte(parser.H264_NAL_PPS)
 }
