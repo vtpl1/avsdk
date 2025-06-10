@@ -17,10 +17,16 @@ import (
 
 const bitsInByte = 8
 
+func IsKeyFrame(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last9BbitsNALUMask
+
+	return typ == byte(parser.H264_NAL_IDR_SLICE)
+}
+
 func IsDataNALU(nalHeader []byte) bool {
 	typ := nalHeader[0] & parser.Last9BbitsNALUMask
 
-	return typ >= 1 && typ <= 5
+	return typ >= byte(parser.H264_NAL_SLICE) && typ <= byte(parser.H264_NAL_IDR_SLICE)
 }
 
 func IsSPSNALU(nalHeader []byte) bool {

@@ -47,10 +47,16 @@ const (
 	MaxSpsCount  = 32
 )
 
-func IsDataNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & 0x1f
+func IsKeyFrame(nalHeader []byte) bool {
+	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
 
-	return typ >= 1 && typ <= 32
+	return typ == byte(parser.HEVC_NAL_IDR_N_LP) || typ == byte(parser.HEVC_NAL_IDR_W_RADL)
+}
+
+func IsDataNALU(nalHeader []byte) bool {
+	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
+
+	return typ >= byte(parser.HEVC_NAL_TRAIL_R) && typ <= byte(parser.HEVC_NAL_IDR_N_LP)
 }
 
 func IsSPSNALU(nalHeader []byte) bool {
