@@ -174,3 +174,7 @@ issues:
     - path: (codec/h265parser/parser.go)
       linters:
         - stylecheck
+  # Fix found issues (if it's supported by the linter).
+  # Default: false
+  
+  # fix: true

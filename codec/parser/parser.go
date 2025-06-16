@@ -143,6 +143,7 @@ func lenStartCode(data []byte) int {
 	if len(data) >= 3 && data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01 {
 		return 3
 	}
+
 	return 0
 }
 
@@ -259,7 +260,6 @@ func SplitNALUs(b []byte) ([][]byte, NALUAvccOrAnnexb) {
 		if len(_b) == 0 { // Check if all data was consumed
 			return nalus, NALUAvcc
 		}
-
 	}
 
 	return [][]byte{b}, NALURaw
@@ -274,6 +274,7 @@ func FindNextAnnexBNALUnit(data []byte, start int) (nalStart int, nalEnd int) {
 		// Benefits from the optimized hasAnnexBStartCode (which uses optimized lenStartCode)
 		if hasAnnexBStartCode(data[i:]) {
 			nalStart = i + lenStartCode(data[i:])
+
 			break
 		}
 	}
@@ -286,6 +287,7 @@ func FindNextAnnexBNALUnit(data []byte, start int) (nalStart int, nalEnd int) {
 		// Benefits from the optimized hasAnnexBStartCode (which uses optimized lenStartCode)
 		if hasAnnexBStartCode(data[i:]) {
 			nalEnd = i
+
 			return
 		}
 	}
