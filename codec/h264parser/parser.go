@@ -15,32 +15,6 @@ import (
 	"github.com/vtpl1/avsdk/utils/bits/pio"
 )
 
-const bitsInByte = 8
-
-func IsKeyFrame(nalHeader []byte) bool {
-	typ := nalHeader[0] & parser.Last9BbitsNALUMask
-
-	return typ == byte(parser.H264_NAL_IDR_SLICE)
-}
-
-func IsDataNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & parser.Last9BbitsNALUMask
-
-	return typ >= byte(parser.H264_NAL_SLICE) && typ <= byte(parser.H264_NAL_IDR_SLICE)
-}
-
-func IsSPSNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & parser.Last9BbitsNALUMask
-
-	return typ == byte(parser.H264_NAL_SPS)
-}
-
-func IsPPSNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & parser.Last9BbitsNALUMask
-
-	return typ == byte(parser.H264_NAL_PPS)
-}
-
 //nolint:dupword
 /*
 From: http://stackoverflow.com/questions/24884827/possible-locations-for-sequence-picture-parameter-sets-for-h-264-stream
@@ -266,6 +240,78 @@ var (
 	AUDBytes       = []byte{0, 0, 0, 1, 0x9, 0xf0, 0, 0, 0, 1} //nolint:gochecknoglobals // AUD
 )
 
+type NaluType byte
+
+const (
+	H264_NAL_UNSPECIFIED NaluType = iota
+	// NALU_NON_IDR - Non-IDR Slice NAL unit.
+	H264_NAL_SLICE
+	H264_NAL_DPA
+	H264_NAL_DPB
+	H264_NAL_DPC
+	// NALU_IDR - IDR Random Access Slice NAL Unit.
+	H264_NAL_IDR_SLICE
+	// NALU_SEI - Supplementary Enhancement Information NAL Unit.
+	H264_NAL_SEI
+	// NALU_SPS - SequenceParameterSet NAL Unit.
+	H264_NAL_SPS
+	// NALU_PPS - PictureParameterSet NAL Unit.
+	H264_NAL_PPS
+	// NALU_AUD - AccessUnitDelimiter NAL Unit.
+	H264_NAL_AUD
+	// NALU_EO_SEQ - End of Sequence NAL Unit.
+	H264_NAL_END_SEQUENCE
+	// NALU_EO_STREAM - End of Stream NAL Unit.
+	H264_NAL_END_STREAM
+	// NALU_FILL - Filler NAL Unit.
+	H264_NAL_FILLER_DATA
+	H264_NAL_SPS_EXT
+	H264_NAL_PREFIX
+	H264_NAL_SUB_SPS
+	H264_NAL_DPS
+	H264_NAL_RESERVED17
+	H264_NAL_RESERVED18
+	H264_NAL_AUXILIARY_SLICE
+	H264_NAL_EXTEN_SLICE
+	H264_NAL_DEPTH_EXTEN_SLICE
+	H264_NAL_RESERVED22
+	H264_NAL_RESERVED23
+	H264_NAL_UNSPECIFIED24
+	H264_NAL_UNSPECIFIED25
+	H264_NAL_UNSPECIFIED26
+	H264_NAL_UNSPECIFIED27
+	H264_NAL_UNSPECIFIED28
+	H264_NAL_UNSPECIFIED29
+	H264_NAL_UNSPECIFIED30
+	H264_NAL_UNSPECIFIED31
+)
+
+const bitsInByte = 8
+
+func IsKeyFrame(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last9BbitsNALUMask
+
+	return typ == byte(H264_NAL_IDR_SLICE)
+}
+
+func IsDataNALU(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last9BbitsNALUMask
+
+	return typ >= byte(H264_NAL_SLICE) && typ <= byte(H264_NAL_IDR_SLICE)
+}
+
+func IsSPSNALU(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last9BbitsNALUMask
+
+	return typ == byte(H264_NAL_SPS)
+}
+
+func IsPPSNALU(nalHeader []byte) bool {
+	typ := nalHeader[0] & parser.Last9BbitsNALUMask
+
+	return typ == byte(H264_NAL_PPS)
+}
+
 func CheckNALUsType(b []byte) parser.NALUAvccOrAnnexb {
 	_, typ := parser.SplitNALUs(b)
 
@@ -431,12 +477,13 @@ func ParseSPS(data []byte) (SPSInfo, error) {
 		return s, err
 	}
 
-	if picOrderCntType == 0 {
+	switch picOrderCntType {
+	case 0:
 		// log2_max_pic_order_cnt_lsb_minus4
 		if _, err = r.ReadExponentialGolombCode(); err != nil {
 			return s, err
 		}
-	} else if picOrderCntType == 1 {
+	case 1:
 		// delta_pic_order_always_zero_flag
 		if _, err = r.ReadBit(); err != nil {
 			return s, err

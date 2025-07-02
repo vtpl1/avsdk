@@ -14,6 +14,90 @@ import (
 	"github.com/vtpl1/avsdk/utils/bits/pio"
 )
 
+type NaluType byte
+
+// HEVC NALU types according to ISO/IEC 23008-2 Table 7.1.
+const (
+	HEVC_NAL_TRAIL_N NaluType = iota
+	HEVC_NAL_TRAIL_R
+	HEVC_NAL_TSA_N
+	HEVC_NAL_TSA_R
+	HEVC_NAL_STSA_N
+	HEVC_NAL_STSA_R
+	HEVC_NAL_RADL_N
+	HEVC_NAL_RADL_R
+	HEVC_NAL_RASL_N
+	HEVC_NAL_RASL_R
+	// Unused.
+	HEVC_NAL_VCL_N10
+	HEVC_NAL_VCL_R11
+	HEVC_NAL_VCL_N12
+	HEVC_NAL_VCL_R13
+	HEVC_NAL_VCL_N14
+	HEVC_NAL_VCL_R15
+	// BLA_W_LP and the following types are Random Access.
+	HEVC_NAL_BLA_W_LP
+	HEVC_NAL_BLA_W_RADL
+	HEVC_NAL_BLA_N_LP
+	HEVC_NAL_IDR_W_RADL
+	HEVC_NAL_IDR_N_LP
+	HEVC_NAL_CRA_NUT
+	// Reserved IRAP VCL NAL unit types.
+	HEVC_NAL_RSV_IRAP_VCL22
+	HEVC_NAL_RSV_IRAP_VCL23
+	// Unused.
+	HEVC_NAL_RSV_VCL24
+	HEVC_NAL_RSV_VCL25
+	HEVC_NAL_RSV_VCL26
+	HEVC_NAL_RSV_VCL27
+	HEVC_NAL_RSV_VCL28
+	HEVC_NAL_RSV_VCL29
+	HEVC_NAL_RSV_VCL30
+	HEVC_NAL_RSV_VCL31
+	// NALU_VPS - VideoParameterSet NAL Unit.
+	HEVC_NAL_VPS
+	// NALU_SPS - SequenceParameterSet NAL Unit.
+	HEVC_NAL_SPS
+	// NALU_PPS - PictureParameterSet NAL Unit.
+	HEVC_NAL_PPS
+	// NALU_AUD - AccessUnitDelimiter NAL Unit.
+	HEVC_NAL_AUD
+	// NALU_EOS - End of Sequence NAL Unit.
+	HEVC_NAL_EOS_NUT
+	// NALU_EOB - End of Bitstream NAL Unit.
+	HEVC_NAL_EOB_NUT
+	// NALU_FD - Filler data NAL Unit.
+	HEVC_NAL_FD_NUT
+	// NALU_SEI_PREFIX - Prefix SEI NAL Unit.
+	HEVC_NAL_SEI_PREFIX
+	// NALU_SEI_SUFFIX - Suffix SEI NAL Unit.
+	HEVC_NAL_SEI_SUFFIX
+	// Unused.
+	HEVC_NAL_RSV_NVCL41
+	HEVC_NAL_RSV_NVCL42
+	HEVC_NAL_RSV_NVCL43
+	HEVC_NAL_RSV_NVCL44
+	HEVC_NAL_RSV_NVCL45
+	HEVC_NAL_RSV_NVCL46
+	HEVC_NAL_RSV_NVCL47
+	HEVC_NAL_UNSPEC48
+	HEVC_NAL_UNSPEC49
+	HEVC_NAL_UNSPEC50
+	HEVC_NAL_UNSPEC51
+	HEVC_NAL_UNSPEC52
+	HEVC_NAL_UNSPEC53
+	HEVC_NAL_UNSPEC54
+	HEVC_NAL_UNSPEC55
+	HEVC_NAL_UNSPEC56
+	HEVC_NAL_UNSPEC57
+	HEVC_NAL_UNSPEC58
+	HEVC_NAL_UNSPEC59
+	HEVC_NAL_UNSPEC60
+	HEVC_NAL_UNSPEC61
+	HEVC_NAL_UNSPEC62
+	HEVC_NAL_UNSPEC63
+)
+
 type SPSInfo struct {
 	ProfileIdc             uint
 	LevelIdc               uint
@@ -50,31 +134,31 @@ const (
 func IsKeyFrame(nalHeader []byte) bool {
 	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
 
-	return typ == byte(parser.HEVC_NAL_IDR_N_LP) || typ == byte(parser.HEVC_NAL_IDR_W_RADL)
+	return typ == byte(HEVC_NAL_IDR_N_LP) || typ == byte(HEVC_NAL_IDR_W_RADL)
 }
 
 func IsDataNALU(nalHeader []byte) bool {
 	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
 
-	return typ >= byte(parser.HEVC_NAL_TRAIL_R) && typ <= byte(parser.HEVC_NAL_IDR_N_LP)
+	return typ >= byte(HEVC_NAL_TRAIL_R) && typ <= byte(HEVC_NAL_IDR_N_LP)
 }
 
 func IsSPSNALU(nalHeader []byte) bool {
 	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
 
-	return typ == byte(parser.HEVC_NAL_SPS)
+	return typ == byte(HEVC_NAL_SPS)
 }
 
 func IsPPSNALU(nalHeader []byte) bool {
 	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
 
-	return typ == byte(parser.HEVC_NAL_PPS)
+	return typ == byte(HEVC_NAL_PPS)
 }
 
 func IsVPSNALU(nalHeader []byte) bool {
 	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
 
-	return typ == byte(parser.HEVC_NAL_VPS)
+	return typ == byte(HEVC_NAL_VPS)
 }
 
 var AUDBytes = []byte{0, 0, 0, 1, 0x9, 0xf0, 0, 0, 0, 1} //nolint:gochecknoglobals // AUD
