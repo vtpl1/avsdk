@@ -54,13 +54,15 @@ func SdpToCodecs(s string) ([]av.CodecData, error) {
 
 		var SpropVPS, SpropSPS, SpropPPS []byte
 
-		keyval = strings.Split(field, ";")
+		keyval = strings.FieldsFunc(field, func(r rune) bool {
+			return r == ' ' || r == ';'
+		})
+
 		for _, field := range keyval {
 			keyval := strings.SplitN(field, "=", 2)
 			if len(keyval) == 2 {
 				key := strings.TrimSpace(keyval[0])
 				val := keyval[1]
-
 				switch key {
 				case "sprop-vps":
 					var valb []byte
@@ -136,7 +138,6 @@ func SdpToCodecs(s string) ([]av.CodecData, error) {
 			ret = append(ret, codecData)
 		} else if mediaTypeStr == av.H265.String() {
 			var codecData h265parser.CodecData
-
 			codecData, err = h265parser.NewCodecDataFromVPSAndSPSAndPPS(SpropVPS, SpropSPS, SpropPPS)
 			if err != nil {
 				continue

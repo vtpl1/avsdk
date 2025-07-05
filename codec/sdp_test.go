@@ -68,6 +68,32 @@ const H264UnamarshalSDP = "v=0\r\n" +
 	"a=control:trackID=13\r\n" +
 	"a=rtpmap:107 vnd.onvif.metadata/90000\r\n"
 
+const H265UnmarshalSDP = "v=0\r\n" +
+	"o=RTSP 1751733122 286 IN IP4 0.0.0.0\r\n" +
+	"s=RTSP server\r\n" +
+	"c=IN IP4 0.0.0.0\r\n" +
+	"t=0 0\r\n" +
+	"a=charset:Shift_JIS\r\n" +
+	"a=range:npt=0-\r\n" +
+	"a=control:*\r\n" +
+	"a=etag:1234567890\r\n" +
+	"m=video 0 RTP/AVP 99\r\n" +
+	"a=rtpmap:99 H265/90000\r\n" +
+	"a=control:trackID=2\r\n" +
+	"a=x-onvif-track:trackID=2\r\n" +
+	"a=fmtp:99 sprop-vps=QAEMAf//AWAAAAMAgAAAAwAAAwCWrAk=; sprop-sps=QgEBAWAAAAMAgAAAAwAAAwCWoAFAIAeB/ja7tTd3JdYC3AQEBBAAAD6AAAJxByHe5R2I; sprop-pps=RAHBcrCcGw3iQA==\r\n" +
+	"a=recvonly\r\n" +
+	"m=audio 0 RTP/AVP 0\r\n" +
+	"a=rtpmap:0 pcmu/8000\r\n" +
+	"a=control:trackID=0\r\n" +
+	"a=x-onvif-track:trackID=0\r\n" +
+	"a=recvonly\r\n" +
+	"m=application 0 RTP/AVP 107\r\n" +
+	"a=control:trackID=1\r\n" +
+	"a=x-onvif-track:trackID=1\r\n" +
+	"a=rtpmap:107 vnd.onvif.metadata/90000\r\n" +
+	"a=recvonly\r\n"
+
 func tt(t av.AudioCodecData) {
 }
 
@@ -90,6 +116,10 @@ func TestSdpToCodecs(t *testing.T) {
 		{
 			name: "MPEG4UnmarshalSDP",
 			s:    MPEG4UnmarshalSDP,
+		},
+		{
+			name: "H265UnmarshalSDP",
+			s:    H265UnmarshalSDP,
 		},
 	}
 	for _, tt := range tests {
