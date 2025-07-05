@@ -774,6 +774,7 @@ type CodecData struct {
 	Record     []byte
 	RecordInfo AVCDecoderConfRecord
 	SPSInfo    SPSInfo
+	ControlURL string
 }
 
 func (s CodecData) Type() av.CodecType {
@@ -810,6 +811,10 @@ func (s CodecData) Height() int {
 
 func (s CodecData) FPS() int {
 	return int(s.SPSInfo.FPS)
+}
+
+func (s CodecData) TrackID() string {
+	return s.ControlURL
 }
 
 func (s CodecData) Resolution() string {

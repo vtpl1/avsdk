@@ -41,6 +41,12 @@ func SdpToCodecs(s string) ([]av.CodecData, error) {
 			mediaTypeStr = field[0]
 		}
 
+		controlURL := ""
+		field, ok = media.Attribute("control")
+		if ok {
+			controlURL = field
+		}
+
 		field, ok = media.Attribute("fmtp")
 		if !ok {
 			continue
@@ -126,7 +132,7 @@ func SdpToCodecs(s string) ([]av.CodecData, error) {
 			if err != nil {
 				continue
 			}
-
+			codecData.ControlURL = controlURL
 			ret = append(ret, codecData)
 		} else if mediaTypeStr == av.H265.String() {
 			var codecData h265parser.CodecData
@@ -135,6 +141,7 @@ func SdpToCodecs(s string) ([]av.CodecData, error) {
 			if err != nil {
 				continue
 			}
+			codecData.ControlURL = controlURL
 
 			ret = append(ret, codecData)
 		}
