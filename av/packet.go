@@ -16,4 +16,6 @@ type Packet struct {
 	Time            time.Duration // packet decode time
 	Duration        time.Duration // packet duration
 	Data            []byte        // packet data
+	Metadata        []byte
+	Extra           any
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/vtpl1/avsdk/codec/h265parser"
 )
 
-//nolint:gocognit,funlen
+//nolint:gocognit,funlen, gocyclo, cyclop
 func SdpToCodecs(s string) ([]av.CodecData, error) {
 	sd := sdp.SessionDescription{}
 	err := sd.UnmarshalString(s)
