@@ -2,6 +2,7 @@ package avutil
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"net/url"
@@ -35,9 +36,10 @@ type HandlerMuxer struct {
 	stage int
 }
 
-func (handler *HandlerMuxer) WriteHeader(streams []av.CodecData) error {
+// WriteHeader implements av.Muxer.
+func (handler *HandlerMuxer) WriteHeader(ctx context.Context, streams []av.CodecData) error {
 	if handler.stage == 0 {
-		if err := handler.Muxer.WriteHeader(streams); err != nil {
+		if err := handler.Muxer.WriteHeader(ctx, streams); err != nil {
 			return err
 		}
 
@@ -47,10 +49,11 @@ func (handler *HandlerMuxer) WriteHeader(streams []av.CodecData) error {
 	return nil
 }
 
-func (handler *HandlerMuxer) WriteTrailer() error {
+// WriteTrailer implements av.Muxer.
+func (handler *HandlerMuxer) WriteTrailer(ctx context.Context) error {
 	if handler.stage == 1 {
 		handler.stage++
-		if err := handler.Muxer.WriteTrailer(); err != nil {
+		if err := handler.Muxer.WriteTrailer(ctx); err != nil {
 			return err
 		}
 	}
@@ -59,10 +62,6 @@ func (handler *HandlerMuxer) WriteTrailer() error {
 }
 
 func (handler *HandlerMuxer) Close() error {
-	if err := handler.WriteTrailer(); err != nil {
-		return err
-	}
-
 	return handler.w.Close()
 }
 
@@ -322,9 +321,9 @@ func Create(url string) (av.MuxCloser, error) {
 	return DefaultHandlers.Create(url)
 }
 
-func CopyPackets(dst av.PacketWriter, src av.PacketReader) error {
+func CopyPackets(ctx context.Context, dst av.PacketWriter, src av.PacketReader) error {
 	for {
-		pkt, err := src.ReadPacket()
+		pkt, err := src.ReadPacket(ctx)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
@@ -333,7 +332,7 @@ func CopyPackets(dst av.PacketWriter, src av.PacketReader) error {
 			return err
 		}
 
-		if err := dst.WritePacket(pkt); err != nil {
+		if err := dst.WritePacket(ctx, pkt); err != nil {
 			return err
 		}
 	}
@@ -341,23 +340,23 @@ func CopyPackets(dst av.PacketWriter, src av.PacketReader) error {
 	return nil
 }
 
-func CopyFile(dst av.Muxer, src av.Demuxer) error {
-	streams, err := src.Streams()
+func CopyFile(ctx context.Context, dst av.Muxer, src av.Demuxer) error {
+	streams, err := src.Streams(ctx)
 	if err != nil {
 		return err
 	}
 
-	if err := dst.WriteHeader(streams); err != nil {
+	if err := dst.WriteHeader(ctx, streams); err != nil {
 		return err
 	}
 
-	if err := CopyPackets(dst, src); err != nil {
+	if err := CopyPackets(ctx, dst, src); err != nil {
 		if !errors.Is(err, io.EOF) {
 			return err
 		}
 	}
 
-	if err := dst.WriteTrailer(); err != nil {
+	if err := dst.WriteTrailer(ctx); err != nil {
 		return err
 	}
 
