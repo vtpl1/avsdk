@@ -28,7 +28,7 @@ type Pauser interface {
 
 // TimeSeeker allows seeking to a specific timestamp.
 type TimeSeeker interface {
-	Seek(timestamp uint64) (uint64, error)
+	TimeSeek(timestamp uint64) (uint64, error)
 }
 
 // DemuxPauser is a Demuxer with pause functionality.
