@@ -18,4 +18,5 @@ type Packet struct {
 	Data            []byte        // packet data
 	Metadata        []byte
 	Extra           any
+	FrameID         int64
 }
