@@ -288,7 +288,8 @@ const (
 
 //nolint:gocyclo,cyclop
 func (data NaluType) String() string {
-	switch data {
+	naluType := NaluType(data & parser.Last9BbitsNALUMask)
+	switch naluType {
 	case H264_NAL_UNSPECIFIED:
 		return "UNSPECIFIED"
 	case H264_NAL_SLICE:

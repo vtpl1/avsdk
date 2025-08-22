@@ -127,7 +127,8 @@ type SPSInfo struct {
 
 //nolint:gocyclo,cyclop,funlen
 func (data NaluType) String() string {
-	switch data {
+	naluType := NaluType(data & parser.Last10BbitsNALUMask)
+	switch naluType {
 	case HEVC_NAL_TRAIL_N:
 		return "TRAIL_N"
 	case HEVC_NAL_TRAIL_R:
