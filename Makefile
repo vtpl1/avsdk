@@ -3,6 +3,7 @@ all: prerequisite prepare test testsum coverage check
 
 .PHONY: prerequisite
 prerequisite:
+	@go install golang.org/x/tools/cmd/stringer@latest
 	@go install golang.org/x/vuln/cmd/govulncheck@latest
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@go install mvdan.cc/gofumpt@latest
