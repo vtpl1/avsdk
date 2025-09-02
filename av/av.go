@@ -29,6 +29,7 @@ const (
 )
 
 var (
+	UNKNOWN    = MakeVideoCodecType(avCodecTypeMagic + 0) //nolint:gochecknoglobals
 	H264       = MakeVideoCodecType(avCodecTypeMagic + 1) //nolint:gochecknoglobals
 	H265       = MakeVideoCodecType(avCodecTypeMagic + 2) //nolint:gochecknoglobals
 	JPEG       = MakeVideoCodecType(avCodecTypeMagic + 3) //nolint:gochecknoglobals

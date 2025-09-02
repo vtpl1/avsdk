@@ -127,7 +127,7 @@ type SPSInfo struct {
 
 //nolint:gocyclo,cyclop,funlen
 func (data NaluType) String() string {
-	naluType := NaluType((data >> 1) & parser.Last10BbitsNALUMask)
+	naluType := (data >> 1) & parser.Last10BbitsNALUMask
 	switch naluType {
 	case HEVC_NAL_TRAIL_N:
 		return "TRAIL_N"
@@ -296,6 +296,10 @@ func IsVPSNALU(nalHeader []byte) bool {
 	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
 
 	return typ == byte(HEVC_NAL_VPS)
+}
+
+func IsParamSetNALU(nalHeader []byte) bool {
+	return IsVPSNALU(nalHeader) || IsSPSNALU(nalHeader) || IsPPSNALU(nalHeader)
 }
 
 var AUDBytes = []byte{0, 0, 0, 1, 0x9, 0xf0, 0, 0, 0, 1} //nolint:gochecknoglobals // AUD

@@ -288,7 +288,7 @@ const (
 
 //nolint:gocyclo,cyclop
 func (data NaluType) String() string {
-	naluType := NaluType(data & parser.Last9BbitsNALUMask)
+	naluType := data & parser.Last9BbitsNALUMask
 	switch naluType {
 	case H264_NAL_UNSPECIFIED:
 		return "UNSPECIFIED"
@@ -383,6 +383,10 @@ func IsPPSNALU(nalHeader []byte) bool {
 	typ := nalHeader[0] & parser.Last9BbitsNALUMask
 
 	return typ == byte(H264_NAL_PPS)
+}
+
+func IsParamSetNALU(nalHeader []byte) bool {
+	return IsSPSNALU(nalHeader) || IsPPSNALU(nalHeader)
 }
 
 func CheckNALUsType(b []byte) parser.NALUAvccOrAnnexb {

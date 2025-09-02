@@ -19,4 +19,6 @@ type Packet struct {
 	Metadata        []byte
 	Extra           any
 	FrameID         int64
+	CodecType       CodecType
+	IsParamSetNALU  bool
 }
