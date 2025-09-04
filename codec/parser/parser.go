@@ -184,12 +184,12 @@ func FindNextAnnexBNALUnit(data []byte, start int) (nalStart int, nalEnd int) {
 		if hasAnnexBStartCode(data[i:]) {
 			nalEnd = i
 
-			return
+			return nalStart, nalEnd
 		}
 	}
 	nalEnd = len(data)
 
-	return
+	return nalStart, nalEnd
 }
 
 func AnnexBToAVCC(data []byte) ([]byte, error) {

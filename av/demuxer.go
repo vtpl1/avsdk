@@ -2,6 +2,7 @@ package av
 
 import (
 	"context"
+	"time"
 )
 
 // PacketReader defines the interface for reading compressed audio/video packets.
@@ -24,11 +25,12 @@ type DemuxCloser interface {
 // Pauser allows pausing/resuming demuxing.
 type Pauser interface {
 	Pause(pause bool)
+	IsPaused() bool
 }
 
 // TimeSeeker allows seeking to a specific timestamp.
 type TimeSeeker interface {
-	TimeSeek(timestamp uint64) (uint64, error)
+	TimeSeek(ctx context.Context, seekTime time.Time) (time.Time, error)
 }
 
 // DemuxPauser is a Demuxer with pause functionality.
