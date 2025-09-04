@@ -24,7 +24,7 @@ type DemuxCloser interface {
 
 // Pauser allows pausing/resuming demuxing.
 type Pauser interface {
-	Pause(pause bool)
+	Pause(ctx context.Context, pause bool)
 	IsPaused() bool
 }
 
