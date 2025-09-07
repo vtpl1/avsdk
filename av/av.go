@@ -1,8 +1,14 @@
-// Package av defines basic interfaces and data structures of container demux/mux and audio encode/decode.
 package av
 
-import (
-	"time"
+import "time"
+
+// CodecType represents Video/Audio codec type. can be H264/AAC/SPEEX/...
+type CodecType uint32
+
+const (
+	codecTypeAudioBit  = 0x1
+	codecTypeOtherBits = 1
+	avCodecTypeMagic   = 233333
 )
 
 // MakeVideoCodecType makes a new video codec type.
@@ -18,15 +24,6 @@ func MakeAudioCodecType(base uint32) CodecType {
 
 	return c
 }
-
-// CodecType represents Video/Audio codec type. can be H264/AAC/SPEEX/...
-type CodecType uint32
-
-const (
-	codecTypeAudioBit  = 0x1
-	codecTypeOtherBits = 1
-	avCodecTypeMagic   = 233333
-)
 
 var (
 	UNKNOWN    = MakeVideoCodecType(avCodecTypeMagic + 0) //nolint:gochecknoglobals

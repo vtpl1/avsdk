@@ -14,90 +14,6 @@ import (
 	"github.com/vtpl1/avsdk/utils/bits/pio"
 )
 
-type NaluType byte
-
-// HEVC NALU types according to ISO/IEC 23008-2 Table 7.1.
-const (
-	HEVC_NAL_TRAIL_N NaluType = iota // TRAIL_N
-	HEVC_NAL_TRAIL_R                 // TRAIL_R
-	HEVC_NAL_TSA_N                   // TSA_N
-	HEVC_NAL_TSA_R                   // TSA_R
-	HEVC_NAL_STSA_N                  // STSA_N
-	HEVC_NAL_STSA_R                  // STSA_R
-	HEVC_NAL_RADL_N                  // RADL_N
-	HEVC_NAL_RADL_R                  // RADL_R
-	HEVC_NAL_RASL_N                  // RASL_N
-	HEVC_NAL_RASL_R                  // RASL_R
-	// Unused.
-	HEVC_NAL_VCL_N10 // VCL_N10
-	HEVC_NAL_VCL_R11 // VCL_R11
-	HEVC_NAL_VCL_N12 // VCL_N12
-	HEVC_NAL_VCL_R13 // VCL_R13
-	HEVC_NAL_VCL_N14 // VCL_N14
-	HEVC_NAL_VCL_R15 // VCL_R15
-	// BLA_W_LP and the following types are Random Access.
-	HEVC_NAL_BLA_W_LP   // BLA_W_LP
-	HEVC_NAL_BLA_W_RADL // BLA_W_RADL
-	HEVC_NAL_BLA_N_LP   // BLA_N_LP
-	HEVC_NAL_IDR_W_RADL // IDR_W_RADL
-	HEVC_NAL_IDR_N_LP   // IDR_N_LP
-	HEVC_NAL_CRA_NUT    // CRA_NUT
-	// Reserved IRAP VCL NAL unit types.
-	HEVC_NAL_RSV_IRAP_VCL22 // RSV_IRAP_VCL22
-	HEVC_NAL_RSV_IRAP_VCL23 // RSV_IRAP_VCL23
-	// Unused.
-	HEVC_NAL_RSV_VCL24 // RSV_VCL24
-	HEVC_NAL_RSV_VCL25 // RSV_VCL25
-	HEVC_NAL_RSV_VCL26 // RSV_VCL26
-	HEVC_NAL_RSV_VCL27 // RSV_VCL27
-	HEVC_NAL_RSV_VCL28 // RSV_VCL28
-	HEVC_NAL_RSV_VCL29 // RSV_VCL29
-	HEVC_NAL_RSV_VCL30 // RSV_VCL30
-	HEVC_NAL_RSV_VCL31 // RSV_VCL31
-	// NALU_VPS - VideoParameterSet NAL Unit.
-	HEVC_NAL_VPS // VPS
-	// NALU_SPS - SequenceParameterSet NAL Unit.
-	HEVC_NAL_SPS // SPS
-	// NALU_PPS - PictureParameterSet NAL Unit.
-	HEVC_NAL_PPS // PPS
-	// NALU_AUD - AccessUnitDelimiter NAL Unit.
-	HEVC_NAL_AUD // AUD
-	// NALU_EOS - End of Sequence NAL Unit.
-	HEVC_NAL_EOS_NUT // EOS_NUT
-	// NALU_EOB - End of Bitstream NAL Unit.
-	HEVC_NAL_EOB_NUT // EOB_NUT
-	// NALU_FD - Filler data NAL Unit.
-	HEVC_NAL_FD_NUT // FD_NUT
-	// NALU_SEI_PREFIX - Prefix SEI NAL Unit.
-	HEVC_NAL_SEI_PREFIX // SEI_PREFIX
-	// NALU_SEI_SUFFIX - Suffix SEI NAL Unit.
-	HEVC_NAL_SEI_SUFFIX // SEI_SUFFIX
-	// Unused.
-	HEVC_NAL_RSV_NVCL41 // RSV_NVCL41
-	HEVC_NAL_RSV_NVCL42 // RSV_NVCL42
-	HEVC_NAL_RSV_NVCL43 // RSV_NVCL43
-	HEVC_NAL_RSV_NVCL44 // RSV_NVCL44
-	HEVC_NAL_RSV_NVCL45 // RSV_NVCL45
-	HEVC_NAL_RSV_NVCL46 // RSV_NVCL46
-	HEVC_NAL_RSV_NVCL47 // RSV_NVCL47
-	HEVC_NAL_UNSPEC48   // UNSPEC48
-	HEVC_NAL_UNSPEC49   // UNSPEC49
-	HEVC_NAL_UNSPEC50   // UNSPEC50
-	HEVC_NAL_UNSPEC51   // UNSPEC51
-	HEVC_NAL_UNSPEC52   // UNSPEC52
-	HEVC_NAL_UNSPEC53   // UNSPEC53
-	HEVC_NAL_UNSPEC54   // UNSPEC54
-	HEVC_NAL_UNSPEC55   // UNSPEC55
-	HEVC_NAL_UNSPEC56   // UNSPEC56
-	HEVC_NAL_UNSPEC57   // UNSPEC57
-	HEVC_NAL_UNSPEC58   // UNSPEC58
-	HEVC_NAL_UNSPEC59   // UNSPEC59
-	HEVC_NAL_UNSPEC60   // UNSPEC60
-	HEVC_NAL_UNSPEC61   // UNSPEC61
-	HEVC_NAL_UNSPEC62   // UNSPEC62
-	HEVC_NAL_UNSPEC63   // UNSPEC63
-)
-
 type SPSInfo struct {
 	ProfileIdc             uint
 	LevelIdc               uint
@@ -125,143 +41,6 @@ type SPSInfo struct {
 	fps                              uint
 }
 
-//nolint:gocyclo,cyclop,funlen
-func (data NaluType) String() string {
-	naluType := (data >> 1) & parser.Last10BbitsNALUMask
-	switch naluType {
-	case HEVC_NAL_TRAIL_N:
-		return "TRAIL_N"
-	case HEVC_NAL_TRAIL_R:
-		return "TRAIL_R"
-	case HEVC_NAL_TSA_N:
-		return "TSA_N"
-	case HEVC_NAL_TSA_R:
-		return "TSA_R"
-	case HEVC_NAL_STSA_N:
-		return "STSA_N"
-	case HEVC_NAL_STSA_R:
-		return "STSA_R"
-	case HEVC_NAL_RADL_N:
-		return "RADL_N"
-	case HEVC_NAL_RADL_R:
-		return "RADL_R"
-	case HEVC_NAL_RASL_N:
-		return "RASL_N"
-	case HEVC_NAL_RASL_R:
-		return "RASL_R"
-	case HEVC_NAL_VCL_N10:
-		return "VCL_N10"
-	case HEVC_NAL_VCL_R11:
-		return "VCL_R11"
-	case HEVC_NAL_VCL_N12:
-		return "VCL_N12"
-	case HEVC_NAL_VCL_R13:
-		return "VCL_R13"
-	case HEVC_NAL_VCL_N14:
-		return "VCL_N14"
-	case HEVC_NAL_VCL_R15:
-		return "VCL_R15"
-	case HEVC_NAL_BLA_W_LP:
-		return "BLA_W_LP"
-	case HEVC_NAL_BLA_W_RADL:
-		return "BLA_W_RADL"
-	case HEVC_NAL_BLA_N_LP:
-		return "BLA_N_LP"
-	case HEVC_NAL_IDR_W_RADL:
-		return "IDR_W_RADL"
-	case HEVC_NAL_IDR_N_LP:
-		return "IDR_N_LP"
-	case HEVC_NAL_CRA_NUT:
-		return "CRA_NUT"
-	case HEVC_NAL_RSV_IRAP_VCL22:
-		return "RSV_IRAP_VCL22"
-	case HEVC_NAL_RSV_IRAP_VCL23:
-		return "RSV_IRAP_VCL23"
-	case HEVC_NAL_RSV_VCL24:
-		return "RSV_VCL24"
-	case HEVC_NAL_RSV_VCL25:
-		return "RSV_VCL25"
-	case HEVC_NAL_RSV_VCL26:
-		return "RSV_VCL26"
-	case HEVC_NAL_RSV_VCL27:
-		return "RSV_VCL27"
-	case HEVC_NAL_RSV_VCL28:
-		return "RSV_VCL28"
-	case HEVC_NAL_RSV_VCL29:
-		return "RSV_VCL29"
-	case HEVC_NAL_RSV_VCL30:
-		return "RSV_VCL30"
-	case HEVC_NAL_RSV_VCL31:
-		return "RSV_VCL31"
-	case HEVC_NAL_VPS:
-		return "VPS"
-	case HEVC_NAL_SPS:
-		return "SPS"
-	case HEVC_NAL_PPS:
-		return "PPS"
-	case HEVC_NAL_AUD:
-		return "AUD"
-	case HEVC_NAL_EOS_NUT:
-		return "EOS_NUT"
-	case HEVC_NAL_EOB_NUT:
-		return "EOB_NUT"
-	case HEVC_NAL_FD_NUT:
-		return "FD_NUT"
-	case HEVC_NAL_SEI_PREFIX:
-		return "SEI_PREFIX"
-	case HEVC_NAL_SEI_SUFFIX:
-		return "SEI_SUFFIX"
-	case HEVC_NAL_RSV_NVCL41:
-		return "RSV_NVCL41"
-	case HEVC_NAL_RSV_NVCL42:
-		return "RSV_NVCL42"
-	case HEVC_NAL_RSV_NVCL43:
-		return "RSV_NVCL43"
-	case HEVC_NAL_RSV_NVCL44:
-		return "RSV_NVCL44"
-	case HEVC_NAL_RSV_NVCL45:
-		return "RSV_NVCL45"
-	case HEVC_NAL_RSV_NVCL46:
-		return "RSV_NVCL46"
-	case HEVC_NAL_RSV_NVCL47:
-		return "RSV_NVCL47"
-	case HEVC_NAL_UNSPEC48:
-		return "UNSPEC48"
-	case HEVC_NAL_UNSPEC49:
-		return "UNSPEC49"
-	case HEVC_NAL_UNSPEC50:
-		return "UNSPEC50"
-	case HEVC_NAL_UNSPEC51:
-		return "UNSPEC51"
-	case HEVC_NAL_UNSPEC52:
-		return "UNSPEC52"
-	case HEVC_NAL_UNSPEC53:
-		return "UNSPEC53"
-	case HEVC_NAL_UNSPEC54:
-		return "UNSPEC54"
-	case HEVC_NAL_UNSPEC55:
-		return "UNSPEC55"
-	case HEVC_NAL_UNSPEC56:
-		return "UNSPEC56"
-	case HEVC_NAL_UNSPEC57:
-		return "UNSPEC57"
-	case HEVC_NAL_UNSPEC58:
-		return "UNSPEC58"
-	case HEVC_NAL_UNSPEC59:
-		return "UNSPEC59"
-	case HEVC_NAL_UNSPEC60:
-		return "UNSPEC60"
-	case HEVC_NAL_UNSPEC61:
-		return "UNSPEC61"
-	case HEVC_NAL_UNSPEC62:
-		return "UNSPEC62"
-	case HEVC_NAL_UNSPEC63:
-		return "UNSPEC63"
-	default:
-		return fmt.Sprintf("UNKNOWN(%d)", data)
-	}
-}
-
 const (
 	MaxVpsCount  = 16
 	MaxSubLayers = 7
@@ -269,33 +48,33 @@ const (
 )
 
 func IsKeyFrame(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
+	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
 
-	return typ == byte(HEVC_NAL_IDR_N_LP) || typ == byte(HEVC_NAL_IDR_W_RADL)
+	return typ == byte(av.HEVC_NAL_IDR_N_LP) || typ == byte(av.HEVC_NAL_IDR_W_RADL)
 }
 
 func IsDataNALU(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
+	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
 
-	return typ >= byte(HEVC_NAL_TRAIL_R) && typ <= byte(HEVC_NAL_IDR_N_LP)
+	return typ >= byte(av.HEVC_NAL_TRAIL_R) && typ <= byte(av.HEVC_NAL_IDR_N_LP)
 }
 
 func IsSPSNALU(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
+	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
 
-	return typ == byte(HEVC_NAL_SPS)
+	return typ == byte(av.HEVC_NAL_SPS)
 }
 
 func IsPPSNALU(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
+	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
 
-	return typ == byte(HEVC_NAL_PPS)
+	return typ == byte(av.HEVC_NAL_PPS)
 }
 
 func IsVPSNALU(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & parser.Last10BbitsNALUMask
+	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
 
-	return typ == byte(HEVC_NAL_VPS)
+	return typ == byte(av.HEVC_NAL_VPS)
 }
 
 func IsParamSetNALU(nalHeader []byte) bool {

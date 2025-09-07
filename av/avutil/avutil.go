@@ -341,7 +341,7 @@ func CopyPackets(ctx context.Context, dst av.PacketWriter, src av.PacketReader) 
 }
 
 func CopyFile(ctx context.Context, dst av.Muxer, src av.Demuxer) error {
-	streams, err := src.Streams(ctx)
+	streams, err := src.GetCodecs(ctx)
 	if err != nil {
 		return err
 	}

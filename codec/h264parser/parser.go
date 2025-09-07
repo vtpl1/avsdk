@@ -240,149 +240,30 @@ var (
 	AUDBytes       = []byte{0, 0, 0, 1, 0x9, 0xf0, 0, 0, 0, 1} //nolint:gochecknoglobals // AUD
 )
 
-type NaluType byte
-
-const (
-	H264_NAL_UNSPECIFIED NaluType = iota // UNSPECIFIED
-	// NALU_NON_IDR - Non-IDR Slice NAL unit.
-	H264_NAL_SLICE // NON_IDR_SLICE
-	H264_NAL_DPA   // DPA
-	H264_NAL_DPB   // DPB
-	H264_NAL_DPC   // DPC
-	// NALU_IDR - IDR Random Access Slice NAL Unit.
-	H264_NAL_IDR_SLICE // IDR_SLICE
-	// NALU_SEI - Supplementary Enhancement Information NAL Unit.
-	H264_NAL_SEI // SEI
-	// NALU_SPS - SequenceParameterSet NAL Unit.
-	H264_NAL_SPS // SPS
-	// NALU_PPS - PictureParameterSet NAL Unit.
-	H264_NAL_PPS // PPS
-	// NALU_AUD - AccessUnitDelimiter NAL Unit.
-	H264_NAL_AUD // AUD
-	// NALU_EO_SEQ - End of Sequence NAL Unit.
-	H264_NAL_END_SEQUENCE // END_SEQUENCE
-	// NALU_EO_STREAM - End of Stream NAL Unit.
-	H264_NAL_END_STREAM // END_STREAM
-	// NALU_FILL - Filler NAL Unit.
-	H264_NAL_FILLER_DATA       // FILLER_DATA
-	H264_NAL_SPS_EXT           // SPS_EXT
-	H264_NAL_PREFIX            // PREFIX
-	H264_NAL_SUB_SPS           // SUB_SPS
-	H264_NAL_DPS               // DPS
-	H264_NAL_RESERVED17        // RESERVED17
-	H264_NAL_RESERVED18        // RESERVED18
-	H264_NAL_AUXILIARY_SLICE   // AUXILIARY_SLICE
-	H264_NAL_EXTEN_SLICE       // EXTEN_SLICE
-	H264_NAL_DEPTH_EXTEN_SLICE // DEPTH_EXTEN_SLICE
-	H264_NAL_RESERVED22        // RESERVED22
-	H264_NAL_RESERVED23        // RESERVED23
-	H264_NAL_UNSPECIFIED24     // UNSPECIFIED24
-	H264_NAL_UNSPECIFIED25     // UNSPECIFIED25
-	H264_NAL_UNSPECIFIED26     // UNSPECIFIED26
-	H264_NAL_UNSPECIFIED27     // UNSPECIFIED27
-	H264_NAL_UNSPECIFIED28     // UNSPECIFIED28
-	H264_NAL_UNSPECIFIED29     // UNSPECIFIED29
-	H264_NAL_UNSPECIFIED30     // UNSPECIFIED30
-	H264_NAL_UNSPECIFIED31     // UNSPECIFIED31
-)
-
-//nolint:gocyclo,cyclop
-func (data NaluType) String() string {
-	naluType := data & parser.Last9BbitsNALUMask
-	switch naluType {
-	case H264_NAL_UNSPECIFIED:
-		return "UNSPECIFIED"
-	case H264_NAL_SLICE:
-		return "NON_IDR_SLICE"
-	case H264_NAL_DPA:
-		return "DPA"
-	case H264_NAL_DPB:
-		return "DPB"
-	case H264_NAL_DPC:
-		return "DPC"
-	case H264_NAL_IDR_SLICE:
-		return "IDR_SLICE"
-	case H264_NAL_SEI:
-		return "SEI"
-	case H264_NAL_SPS:
-		return "SPS"
-	case H264_NAL_PPS:
-		return "PPS"
-	case H264_NAL_AUD:
-		return "AUD"
-	case H264_NAL_END_SEQUENCE:
-		return "END_SEQUENCE"
-	case H264_NAL_END_STREAM:
-		return "END_STREAM"
-	case H264_NAL_FILLER_DATA:
-		return "FILLER_DATA"
-	case H264_NAL_SPS_EXT:
-		return "SPS_EXT"
-	case H264_NAL_PREFIX:
-		return "PREFIX"
-	case H264_NAL_SUB_SPS:
-		return "SUB_SPS"
-	case H264_NAL_DPS:
-		return "DPS"
-	case H264_NAL_RESERVED17:
-		return "RESERVED17"
-	case H264_NAL_RESERVED18:
-		return "RESERVED18"
-	case H264_NAL_AUXILIARY_SLICE:
-		return "AUXILIARY_SLICE"
-	case H264_NAL_EXTEN_SLICE:
-		return "EXTEN_SLICE"
-	case H264_NAL_DEPTH_EXTEN_SLICE:
-		return "DEPTH_EXTEN_SLICE"
-	case H264_NAL_RESERVED22:
-		return "RESERVED22"
-	case H264_NAL_RESERVED23:
-		return "RESERVED23"
-	case H264_NAL_UNSPECIFIED24:
-		return "UNSPECIFIED24"
-	case H264_NAL_UNSPECIFIED25:
-		return "UNSPECIFIED25"
-	case H264_NAL_UNSPECIFIED26:
-		return "UNSPECIFIED26"
-	case H264_NAL_UNSPECIFIED27:
-		return "UNSPECIFIED27"
-	case H264_NAL_UNSPECIFIED28:
-		return "UNSPECIFIED28"
-	case H264_NAL_UNSPECIFIED29:
-		return "UNSPECIFIED29"
-	case H264_NAL_UNSPECIFIED30:
-		return "UNSPECIFIED30"
-	case H264_NAL_UNSPECIFIED31:
-		return "UNSPECIFIED31"
-	default:
-		return fmt.Sprintf("UNKNOWN(%d)", data)
-	}
-}
-
 const bitsInByte = 8
 
 func IsKeyFrame(nalHeader []byte) bool {
-	typ := nalHeader[0] & parser.Last9BbitsNALUMask
+	typ := nalHeader[0] & av.Last9BbitsNALUMask
 
-	return typ == byte(H264_NAL_IDR_SLICE)
+	return typ == byte(av.H264_NAL_IDR_SLICE)
 }
 
 func IsDataNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & parser.Last9BbitsNALUMask
+	typ := nalHeader[0] & av.Last9BbitsNALUMask
 
-	return typ >= byte(H264_NAL_SLICE) && typ <= byte(H264_NAL_IDR_SLICE)
+	return typ >= byte(av.H264_NAL_SLICE) && typ <= byte(av.H264_NAL_IDR_SLICE)
 }
 
 func IsSPSNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & parser.Last9BbitsNALUMask
+	typ := nalHeader[0] & av.Last9BbitsNALUMask
 
-	return typ == byte(H264_NAL_SPS)
+	return typ == byte(av.H264_NAL_SPS)
 }
 
 func IsPPSNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & parser.Last9BbitsNALUMask
+	typ := nalHeader[0] & av.Last9BbitsNALUMask
 
-	return typ == byte(H264_NAL_PPS)
+	return typ == byte(av.H264_NAL_PPS)
 }
 
 func IsParamSetNALU(nalHeader []byte) bool {

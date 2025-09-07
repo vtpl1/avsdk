@@ -12,7 +12,7 @@ type PacketReader interface {
 
 // Demuxer can read compressed audio/video packets from container formats like MP4/FLV/MPEG-TS.
 type Demuxer interface {
-	Streams(ctx context.Context) ([]CodecData, error) // Reads the header and returns video/audio stream info
+	GetCodecs(ctx context.Context) ([]CodecData, error) // Reads the header and returns video/audio stream info
 	PacketReader
 }
 
