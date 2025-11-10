@@ -3,6 +3,12 @@
 // https://www.codeproject.com/Articles/14237/Using-the-G711-standard
 package pcm
 
+import (
+	"time"
+
+	"github.com/vtpl1/avsdk/av"
+)
+
 const alawMax = 0x7FFF
 
 func PCMAtoPCM(alaw byte) int16 {
@@ -51,4 +57,45 @@ func PCMtoPCMA(pcm int16) byte {
 	}
 
 	return alaw ^ 0xD5
+}
+
+type PCMAlawCodecData struct {
+	Typ        av.CodecType
+	SmplFormat av.SampleFormat
+	SmplRate   int
+	ChLayout   av.ChannelLayout
+}
+
+// ChannelLayout implements av.AudioCodecData.
+func (m PCMAlawCodecData) ChannelLayout() av.ChannelLayout {
+	return m.ChLayout
+}
+
+// PacketDuration implements av.AudioCodecData.
+func (m PCMAlawCodecData) PacketDuration(pkt []byte) (time.Duration, error) {
+	return time.Duration(len(pkt)) * time.Second / time.Duration(m.SampleRate()), nil
+}
+
+// SampleFormat implements av.AudioCodecData.
+func (m PCMAlawCodecData) SampleFormat() av.SampleFormat {
+	return m.SmplFormat
+}
+
+// SampleRate implements av.AudioCodecData.
+func (m PCMAlawCodecData) SampleRate() int {
+	return m.SmplRate
+}
+
+// Type implements av.AudioCodecData.
+func (m PCMAlawCodecData) Type() av.CodecType {
+	return m.Typ
+}
+
+func NewPCMAlawCodecData() av.AudioCodecData {
+	return PCMAlawCodecData{
+		Typ:        av.PCM_ALAW,
+		SmplFormat: av.S16,
+		SmplRate:   8000,
+		ChLayout:   av.ChMono,
+	}
 }
