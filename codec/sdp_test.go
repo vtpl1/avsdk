@@ -9,6 +9,7 @@ import (
 	"github.com/vtpl1/avsdk/codec"
 	"github.com/vtpl1/avsdk/codec/h264parser"
 	"github.com/vtpl1/avsdk/codec/h265parser"
+	"github.com/vtpl1/avsdk/codec/pcm"
 )
 
 const MPEG4UnmarshalSDP = "v=0\r\n" +
@@ -98,7 +99,7 @@ func tt(t av.AudioCodecData) {
 }
 
 func TestAudioCodecs(t *testing.T) {
-	s := codec.SpeexCodecData{}
+	s := pcm.SpeexCodecData{}
 	tt(s)
 }
 
