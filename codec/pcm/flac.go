@@ -2,6 +2,7 @@ package pcm
 
 import (
 	"encoding/binary"
+	"fmt"
 	"unicode/utf8"
 
 	"github.com/sigurn/crc16"
@@ -67,7 +68,7 @@ func FLACEncoder(codecName av.CodecType, clockRate uint32) func([]byte) []byte {
 	default:
 		return nil
 	}
-
+	fmt.Println("MONOTOSH:", codecName, clockRate)
 	if table8 == nil {
 		table8 = crc8.MakeTable(crc8.CRC8)
 	}
@@ -125,14 +126,14 @@ func FLACEncoder(codecName av.CodecType, clockRate uint32) func([]byte) []byte {
 			}
 		case av.PCM:
 			n += copy(buf[n:], src)
-			// case core.CodecPCML:
-			// 	// reverse endian from little to big
-			// 	size := len(src)
-			// 	for i := 0; i < size; i += 2 {
-			// 		buf[n] = src[i+1]
-			// 		buf[n+1] = src[i]
-			// 		n += 2
-			// 	}
+		case av.PCML:
+			// reverse endian from little to big
+			size := len(src)
+			for i := 0; i < size; i += 2 {
+				buf[n] = src[i+1]
+				buf[n+1] = src[i]
+				n += 2
+			}
 		}
 
 		// 4. Frame footer

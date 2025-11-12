@@ -24,11 +24,15 @@ type Packet struct {
 // Suitable for logging.
 func (m *Packet) String() string {
 	var naluStr string
-	if len(m.Data) > 0 {
-		nalu := NaluType(m.Data[0])
-		naluStr = nalu.String(m.CodecType)
+	if m.CodecType.IsVideo() {
+		if len(m.Data) > 0 {
+			nalu := NaluType(m.Data[0])
+			naluStr = nalu.String(m.CodecType)
+		} else {
+			naluStr = "EMPTY"
+		}
 	} else {
-		naluStr = "EMPTY"
+		naluStr = "AUDIO"
 	}
 
 	return fmt.Sprintf(

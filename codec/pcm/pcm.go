@@ -82,21 +82,22 @@ func Transcode(dst, src av.AudioCodecData) func([]byte) []byte {
 	var filters []func([]int16) []int16
 
 	switch src.Type() {
-	// case core.CodecPCML:
-	// 	reader = func(src []byte) (dst []int16) {
-	// 		var i, j int
-	// 		n := len(src)
-	// 		dst = make([]int16, n/2)
-	// 		for i < n {
-	// 			lo := src[i]
-	// 			i++
-	// 			hi := src[i]
-	// 			i++
-	// 			dst[j] = int16(hi)<<8 | int16(lo)
-	// 			j++
-	// 		}
-	// 		return
-	// 	}
+	case av.PCML:
+		reader = func(src []byte) (dst []int16) { //nolint:nonamedreturns
+			var i, j int
+			n := len(src)
+			dst = make([]int16, n/2)
+			for i < n {
+				lo := src[i]
+				i++
+				hi := src[i]
+				i++
+				dst[j] = int16(hi)<<8 | int16(lo)
+				j++
+			}
+
+			return
+		}
 	case av.PCM:
 		reader = func(src []byte) (dst []int16) { //nolint:nonamedreturns
 			var i, j int
@@ -152,18 +153,19 @@ func Transcode(dst, src av.AudioCodecData) func([]byte) []byte {
 	}
 
 	switch dst.Type() {
-	// case core.CodecPCML:
-	// 	writer = func(src []int16) (dst []byte) {
-	// 		var i int
-	// 		dst = make([]byte, len(src)*2)
-	// 		for _, sample := range src {
-	// 			dst[i] = byte(sample)
-	// 			i++
-	// 			dst[i] = byte(sample >> 8)
-	// 			i++
-	// 		}
-	// 		return
-	// 	}
+	case av.PCML:
+		writer = func(src []int16) (dst []byte) { //nolint:nonamedreturns
+			var i int
+			dst = make([]byte, len(src)*2)
+			for _, sample := range src {
+				dst[i] = byte(sample)
+				i++
+				dst[i] = byte(sample >> 8)
+				i++
+			}
+
+			return
+		}
 	case av.PCM:
 		writer = func(src []int16) (dst []byte) { //nolint:nonamedreturns
 			var i int

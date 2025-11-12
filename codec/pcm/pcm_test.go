@@ -25,13 +25,13 @@ func TestTranscode(t *testing.T) {
 			source: "FCCA00130343062808130B510D9E0F7610DA111113EA15BD16F2168215D41561",
 			expect: "FCCA00130343062808130B510D9E0F7610DA111113EA15BD16F2168215D41561",
 		},
-		// {
-		// 	name:   "s16be->s16le",
-		// 	src:    core.Codec{Name: core.CodecPCM, ClockRate: 8000, Channels: 1},
-		// 	dst:    core.Codec{Name: core.CodecPCML, ClockRate: 8000, Channels: 1},
-		// 	source: "FCCA00130343062808130B510D9E0F7610DA111113EA15BD16F2168215D41561",
-		// 	expect: "CAFC1300430328061308510B9E0D760FDA101111EA13BD15F2168216D4156115",
-		// },
+		{
+			name:   "s16be->s16le",
+			src:    pcm.PCMCodecData{Typ: av.PCM, SmplRate: 8000, ChLayout: av.ChMono},
+			dst:    pcm.PCMLCodecData{Typ: av.PCML, SmplRate: 8000, ChLayout: av.ChMono},
+			source: "FCCA00130343062808130B510D9E0F7610DA111113EA15BD16F2168215D41561",
+			expect: "CAFC1300430328061308510B9E0D760FDA101111EA13BD15F2168216D4156115",
+		},
 		{
 			name:   "s16be->mulaw",
 			src:    pcm.NewPCMCodecData(),

@@ -26,21 +26,25 @@ func MakeAudioCodecType(base uint32) CodecType {
 }
 
 var (
-	UNKNOWN    = MakeVideoCodecType(avCodecTypeMagic + 0) //nolint:gochecknoglobals
-	H264       = MakeVideoCodecType(avCodecTypeMagic + 1) //nolint:gochecknoglobals
-	H265       = MakeVideoCodecType(avCodecTypeMagic + 2) //nolint:gochecknoglobals
-	JPEG       = MakeVideoCodecType(avCodecTypeMagic + 3) //nolint:gochecknoglobals
-	VP8        = MakeVideoCodecType(avCodecTypeMagic + 4) //nolint:gochecknoglobals
-	VP9        = MakeVideoCodecType(avCodecTypeMagic + 5) //nolint:gochecknoglobals
-	AV1        = MakeVideoCodecType(avCodecTypeMagic + 6) //nolint:gochecknoglobals
-	MJPEG      = MakeVideoCodecType(avCodecTypeMagic + 7) //nolint:gochecknoglobals
-	AAC        = MakeAudioCodecType(avCodecTypeMagic + 1) //nolint:gochecknoglobals
-	PCM_MULAW  = MakeAudioCodecType(avCodecTypeMagic + 2) //nolint:gochecknoglobals,revive,stylecheck
-	PCM_ALAW   = MakeAudioCodecType(avCodecTypeMagic + 3) //nolint:gochecknoglobals,revive,stylecheck
-	SPEEX      = MakeAudioCodecType(avCodecTypeMagic + 4) //nolint:gochecknoglobals
-	NELLYMOSER = MakeAudioCodecType(avCodecTypeMagic + 5) //nolint:gochecknoglobals
-	PCM        = MakeAudioCodecType(avCodecTypeMagic + 6) //nolint:gochecknoglobals
-	OPUS       = MakeAudioCodecType(avCodecTypeMagic + 7) //nolint:gochecknoglobals
+	UNKNOWN    = MakeVideoCodecType(avCodecTypeMagic + 0)  //nolint:gochecknoglobals
+	H264       = MakeVideoCodecType(avCodecTypeMagic + 1)  //nolint:gochecknoglobals	// payloadType: 96
+	H265       = MakeVideoCodecType(avCodecTypeMagic + 2)  //nolint:gochecknoglobals
+	JPEG       = MakeVideoCodecType(avCodecTypeMagic + 3)  //nolint:gochecknoglobals	// payloadType: 26
+	VP8        = MakeVideoCodecType(avCodecTypeMagic + 4)  //nolint:gochecknoglobals
+	VP9        = MakeVideoCodecType(avCodecTypeMagic + 5)  //nolint:gochecknoglobals
+	AV1        = MakeVideoCodecType(avCodecTypeMagic + 6)  //nolint:gochecknoglobals
+	MJPEG      = MakeVideoCodecType(avCodecTypeMagic + 7)  //nolint:gochecknoglobals
+	AAC        = MakeAudioCodecType(avCodecTypeMagic + 1)  //nolint:gochecknoglobals	// MPEG4-GENERIC
+	PCM_MULAW  = MakeAudioCodecType(avCodecTypeMagic + 2)  //nolint:gochecknoglobals,revive,stylecheck	// payloadType: 0
+	PCM_ALAW   = MakeAudioCodecType(avCodecTypeMagic + 3)  //nolint:gochecknoglobals,revive,stylecheck	// payloadType: 8
+	SPEEX      = MakeAudioCodecType(avCodecTypeMagic + 4)  //nolint:gochecknoglobals	// L16 Linear PCM (big endian)
+	NELLYMOSER = MakeAudioCodecType(avCodecTypeMagic + 5)  //nolint:gochecknoglobals
+	PCM        = MakeAudioCodecType(avCodecTypeMagic + 6)  //nolint:gochecknoglobals
+	OPUS       = MakeAudioCodecType(avCodecTypeMagic + 7)  //nolint:gochecknoglobals	// payloadType: 111
+	MP3        = MakeAudioCodecType(avCodecTypeMagic + 8)  //nolint:gochecknoglobals	// MPA payload: 14, aka MPEG-1 Layer III
+	PCML       = MakeAudioCodecType(avCodecTypeMagic + 9)  //nolint:gochecknoglobals	// Linear PCM (little endian)
+	ELD        = MakeAudioCodecType(avCodecTypeMagic + 10) //nolint:gochecknoglobals	// AAC-ELD
+	FLAC       = MakeAudioCodecType(avCodecTypeMagic + 11) //nolint:gochecknoglobals
 )
 
 func (s CodecType) String() string {
@@ -71,6 +75,14 @@ func (s CodecType) String() string {
 		return "PCM"
 	case OPUS:
 		return "OPUS"
+	case MP3:
+		return "MPA"
+	case PCML:
+		return "PCML"
+	case ELD:
+		return "AAC_ELD"
+	case FLAC:
+		return "FLAC"
 	}
 
 	return ""
