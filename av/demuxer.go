@@ -8,7 +8,6 @@ import (
 // PacketReader defines the interface for reading compressed audio/video packets.
 type PacketReader interface {
 	ReadPacket(ctx context.Context) (Packet, error)
-	ReadAudioPacket(ctx context.Context) (Packet, error)
 }
 
 // Demuxer can read compressed audio/video packets from container formats like MP4/FLV/MPEG-TS.

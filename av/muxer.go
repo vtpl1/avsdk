@@ -4,7 +4,6 @@ import "context"
 
 type PacketWriter interface {
 	WritePacket(ctx context.Context, pkt Packet) error
-	WriteAudioPacket(ctx context.Context, pkt Packet) error
 }
 
 type HandshakeMuxer interface {
