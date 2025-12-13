@@ -2,7 +2,6 @@ package pcm
 
 import (
 	"encoding/binary"
-	"fmt"
 	"unicode/utf8"
 
 	"github.com/sigurn/crc16"
@@ -68,7 +67,6 @@ func FLACEncoder(codecName av.CodecType, clockRate uint32) func([]byte) []byte {
 	default:
 		return nil
 	}
-	fmt.Println("MONOTOSH:", codecName, clockRate)
 	if table8 == nil {
 		table8 = crc8.MakeTable(crc8.CRC8)
 	}

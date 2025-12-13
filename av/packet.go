@@ -8,7 +8,7 @@ import (
 
 // Packet stores compressed audio/video data.
 type Packet struct {
-	IsKeyFrame      bool          // true if this video packet is a keyframe
+	KeyFrame        bool          // true if this video packet is a keyframe
 	Idx             int8          // stream index in container format
 	CompositionTime time.Duration // PTS - DTS (e.g., for H.264 B-frames)
 	Time            time.Duration // decode timestamp (DTS)
@@ -70,7 +70,7 @@ func (m *Packet) GoString() string {
 			"  Extra:           %s (%s),\n"+
 			"}",
 		m.FrameID,
-		m.IsKeyFrame,
+		m.KeyFrame,
 		m.Idx,
 		m.CodecType.String(),
 		m.Time,
@@ -81,4 +81,16 @@ func (m *Packet) GoString() string {
 		fmt.Sprintf("%v", m.Extra),
 		extraType,
 	)
+}
+
+func (m *Packet) IsKeyFrame() bool {
+	return m.KeyFrame
+}
+
+func (m *Packet) IsAudio() bool {
+	return m.CodecType.IsAudio()
+}
+
+func (m *Packet) IsVideo() bool {
+	return m.CodecType.IsVideo()
 }
