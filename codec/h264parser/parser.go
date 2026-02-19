@@ -243,27 +243,27 @@ var (
 const bitsInByte = 8
 
 func IsKeyFrame(nalHeader []byte) bool {
-	typ := nalHeader[0] & av.Last9BbitsNALUMask
+	typ := av.H264NaluType(nalHeader[0]) & av.H264NALTypeMask
 
-	return typ == byte(av.H264_NAL_IDR_SLICE)
+	return typ == av.H264_NAL_IDR_SLICE
 }
 
 func IsDataNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & av.Last9BbitsNALUMask
+	typ := av.H264NaluType(nalHeader[0]) & av.H264NALTypeMask
 
-	return typ >= byte(av.H264_NAL_SLICE) && typ <= byte(av.H264_NAL_IDR_SLICE)
+	return typ >= av.H264_NAL_SLICE && typ <= av.H264_NAL_IDR_SLICE
 }
 
 func IsSPSNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & av.Last9BbitsNALUMask
+	typ := av.H264NaluType(nalHeader[0]) & av.H264NALTypeMask
 
-	return typ == byte(av.H264_NAL_SPS)
+	return typ == av.H264_NAL_SPS
 }
 
 func IsPPSNALU(nalHeader []byte) bool {
-	typ := nalHeader[0] & av.Last9BbitsNALUMask
+	typ := av.H264NaluType(nalHeader[0]) & av.H264NALTypeMask
 
-	return typ == byte(av.H264_NAL_PPS)
+	return typ == av.H264_NAL_PPS
 }
 
 func IsParamSetNALU(nalHeader []byte) bool {
@@ -765,6 +765,12 @@ func (s CodecData) Width() int {
 
 func (s CodecData) Height() int {
 	return int(s.SPSInfo.Height)
+}
+
+// TimeScale returns the clock frequency used for RTP timestamps and fMP4/CMAF baseMediaDecodeTime.
+// RFC 6184 mandates 90000 Hz for H.264 over RTP; CMAF likewise recommends 90000 for video.
+func (s CodecData) TimeScale() uint32 {
+	return 90000
 }
 
 func (s CodecData) FPS() int {

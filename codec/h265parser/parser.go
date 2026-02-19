@@ -48,33 +48,33 @@ const (
 )
 
 func IsKeyFrame(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
+	typ := av.H265NaluType(nalHeader[0]>>1) & av.H265NALTypeMask
 
-	return typ == byte(av.HEVC_NAL_IDR_N_LP) || typ == byte(av.HEVC_NAL_IDR_W_RADL)
+	return typ == av.HEVC_NAL_IDR_N_LP || typ == av.HEVC_NAL_IDR_W_RADL
 }
 
 func IsDataNALU(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
+	typ := av.H265NaluType(nalHeader[0]>>1) & av.H265NALTypeMask
 
-	return typ >= byte(av.HEVC_NAL_TRAIL_R) && typ <= byte(av.HEVC_NAL_IDR_N_LP)
+	return typ >= av.HEVC_NAL_TRAIL_R && typ <= av.HEVC_NAL_IDR_N_LP
 }
 
 func IsSPSNALU(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
+	typ := av.H265NaluType(nalHeader[0]>>1) & av.H265NALTypeMask
 
-	return typ == byte(av.HEVC_NAL_SPS)
+	return typ == av.HEVC_NAL_SPS
 }
 
 func IsPPSNALU(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
+	typ := av.H265NaluType(nalHeader[0]>>1) & av.H265NALTypeMask
 
-	return typ == byte(av.HEVC_NAL_PPS)
+	return typ == av.HEVC_NAL_PPS
 }
 
 func IsVPSNALU(nalHeader []byte) bool {
-	typ := (nalHeader[0] >> 1) & av.Last10BbitsNALUMask
+	typ := av.H265NaluType(nalHeader[0]>>1) & av.H265NALTypeMask
 
-	return typ == byte(av.HEVC_NAL_VPS)
+	return typ == av.HEVC_NAL_VPS
 }
 
 func IsParamSetNALU(nalHeader []byte) bool {
@@ -386,6 +386,12 @@ func (s CodecData) Width() int {
 
 func (s CodecData) Height() int {
 	return int(s.SPSInfo.Height)
+}
+
+// TimeScale returns the clock frequency used for RTP timestamps and fMP4/CMAF baseMediaDecodeTime.
+// RFC 7798 mandates 90000 Hz for H.265 over RTP; CMAF likewise recommends 90000 for video.
+func (s CodecData) TimeScale() uint32 {
+	return 90000
 }
 
 func (s CodecData) FPS() int {

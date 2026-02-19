@@ -96,6 +96,14 @@ func (s CodecType) IsVideo() bool {
 	return s&codecTypeAudioBit == 0
 }
 
+// Stream pairs a stream index with its codec configuration.
+// Idx matches Packet.Idx; it is the authoritative identifier and must not be inferred
+// from the slice position, as stream indices may be non-contiguous (e.g. MPEG-TS PIDs).
+type Stream struct {
+	Idx   uint16 // stream index; matches Packet.Idx
+	Codec CodecData
+}
+
 // CodecData is some important bytes for initialising audio/video decoder,
 // can be converted to VideoCodecData or AudioCodecData using:
 //
@@ -109,8 +117,9 @@ type CodecData interface {
 
 type VideoCodecData interface {
 	CodecData
-	Width() int  // Video width
-	Height() int // Video height
+	Width() int        // Video width
+	Height() int       // Video height
+	TimeScale() uint32 // clock frequency for timestamp conversion (e.g. 90000 for RTP and fMP4/CMAF)
 }
 
 type AudioCodecData interface {

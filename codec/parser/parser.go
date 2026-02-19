@@ -3,7 +3,6 @@ package parser
 import (
 	"encoding/binary"
 
-	"github.com/vtpl1/avsdk/av"
 	"github.com/vtpl1/avsdk/utils/bits/pio"
 )
 
@@ -136,7 +135,7 @@ func SplitNALUs(b []byte) ([][]byte, NALUAvccOrAnnexb) {
 			nalus = append(nalus, _b[:_val4])
 
 			_b = _b[_val4:]
-			if len(_b) < av.MinimumNALULength {
+			if len(_b) < 4 {
 				break
 			}
 

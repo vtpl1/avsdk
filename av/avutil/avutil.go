@@ -37,7 +37,7 @@ type HandlerMuxer struct {
 }
 
 // WriteHeader implements av.Muxer.
-func (handler *HandlerMuxer) WriteHeader(ctx context.Context, streams []av.CodecData) error {
+func (handler *HandlerMuxer) WriteHeader(ctx context.Context, streams []av.Stream) error {
 	if handler.stage == 0 {
 		if err := handler.Muxer.WriteHeader(ctx, streams); err != nil {
 			return err
@@ -322,6 +322,8 @@ func Create(url string) (av.MuxCloser, error) {
 }
 
 func CopyPackets(ctx context.Context, dst av.PacketWriter, src av.PacketReader) error {
+	cc, dstCanChangeCodec := dst.(av.CodecChanger)
+
 	for {
 		pkt, err := src.ReadPacket(ctx)
 		if err != nil {
@@ -330,6 +332,16 @@ func CopyPackets(ctx context.Context, dst av.PacketWriter, src av.PacketReader) 
 			}
 
 			return err
+		}
+
+		if pkt.NewCodecs != nil && dstCanChangeCodec {
+			if err := cc.WriteCodecChange(ctx, pkt.NewCodecs); err != nil {
+				return err
+			}
+		}
+
+		if len(pkt.Data) == 0 {
+			continue // pure codec-change notification; no media payload to write
 		}
 
 		if err := dst.WritePacket(ctx, pkt); err != nil {
@@ -363,50 +375,54 @@ func CopyFile(ctx context.Context, dst av.Muxer, src av.Demuxer) error {
 	return nil
 }
 
-func Equal(c1 []av.CodecData, c2 []av.CodecData) bool {
-	if len(c1) != len(c2) {
+func Equal(s1 []av.Stream, s2 []av.Stream) bool {
+	if len(s1) != len(s2) {
 		return false
 	}
 
-	for i, codec := range c1 {
-		if codec.Type() != c2[i].Type() {
+	for i, stream := range s1 {
+		if stream.Idx != s2[i].Idx {
 			return false
 		}
 
-		switch c1codec := codec.(type) {
+		if stream.Codec.Type() != s2[i].Codec.Type() {
+			return false
+		}
+
+		switch c1 := stream.Codec.(type) {
 		case h265parser.CodecData:
-			c2codec, ok := c2[i].(h265parser.CodecData)
+			c2, ok := s2[i].Codec.(h265parser.CodecData)
 			if !ok {
 				return false
 			}
 
 			if eq := bytes.Compare(
-				c1codec.AVCDecoderConfRecordBytes(),
-				c2codec.AVCDecoderConfRecordBytes(),
+				c1.AVCDecoderConfRecordBytes(),
+				c2.AVCDecoderConfRecordBytes(),
 			); eq != 0 {
 				return false
 			}
 		case h264parser.CodecData:
-			c2codec, ok := c2[i].(h264parser.CodecData)
+			c2, ok := s2[i].Codec.(h264parser.CodecData)
 			if !ok {
 				return false
 			}
 
 			if eq := bytes.Compare(
-				c1codec.AVCDecoderConfRecordBytes(),
-				c2codec.AVCDecoderConfRecordBytes(),
+				c1.AVCDecoderConfRecordBytes(),
+				c2.AVCDecoderConfRecordBytes(),
 			); eq != 0 {
 				return false
 			}
 		case aacparser.CodecData:
-			c2codec, ok := c2[i].(aacparser.CodecData)
+			c2, ok := s2[i].Codec.(aacparser.CodecData)
 			if !ok {
 				return false
 			}
 
 			if eq := bytes.Compare(
-				c1codec.MPEG4AudioConfigBytes(),
-				c2codec.MPEG4AudioConfigBytes(),
+				c1.MPEG4AudioConfigBytes(),
+				c2.MPEG4AudioConfigBytes(),
 			); eq != 0 {
 				return false
 			}
