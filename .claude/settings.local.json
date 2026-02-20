@@ -4,7 +4,8 @@
       "Bash(wc -l:*)",
       "Bash(go test:*)",
       "Bash(go build:*)",
-      "Bash(go vet:*)"
+      "Bash(go vet:*)",
+      "Bash(make check:*)"
     ]
   }
 }

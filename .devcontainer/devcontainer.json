@@ -3,13 +3,11 @@
 {
 	"name": "Go",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/go:1-1.24-bookworm",
-	"features": {
-		"ghcr.io/devcontainers/features/python:1": {
-			"installTools": true,
-			"version": "os-provided",
-			"toolsToInstall": "bump2version,clang-format"
-		}
+	"build": {
+		// Sets the run context to one level up instead of the .devcontainer folder.
+		"context": "..",
+		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
+		"dockerfile": "../dev.Dockerfile"
 	},
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
