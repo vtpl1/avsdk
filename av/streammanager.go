@@ -11,5 +11,5 @@ type StreamManager interface {
 	RemoveConsumer(ctx context.Context, producerID, consumerID string) error
 	PauseProducer(ctx context.Context, producerID string) error
 	ResumeProducer(ctx context.Context, producerID string) error
-	Stopper
+	StartStopper
 }

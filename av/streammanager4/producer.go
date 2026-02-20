@@ -3,6 +3,7 @@ package streammanager4
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/vtpl1/avsdk/av"
 )
@@ -11,7 +12,24 @@ type Producer struct {
 	mu        sync.RWMutex
 	consumers map[string]*consumer
 
-	demuxer av.DemuxCloser
+	alreadyClosing atomic.Bool
+	demuxer        av.DemuxCloser
+}
+
+func (p *Producer) ConsumerCount() int {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	return len(p.consumers)
+}
+
+// Start implements [av.StartStopper].
+func (p *Producer) Start(ctx context.Context) error {
+	panic("unimplemented")
+}
+
+func (p *Producer) AddConsumer(ctx context.Context, producerID string, consumerID string, muxerFactory av.MuxerFactory, muxerRemover av.MuxerRemover, errChan chan<- error) error {
+	panic("unimplemented")
 }
 
 func (p *Producer) Resume(ctx context.Context) error {
@@ -38,15 +56,17 @@ func (p *Producer) Pause(ctx context.Context) error {
 
 // SignalStop implements [av.Stopper].
 func (p *Producer) SignalStop() bool {
-	panic("unimplemented")
+	p.alreadyClosing.Store(true)
+	return true
 }
 
 // Stop implements [av.Stopper].
 func (p *Producer) Stop() error {
-	panic("unimplemented")
+	p.SignalStop()
+	return p.WaitStop()
 }
 
 // WaitStop implements [av.Stopper].
 func (p *Producer) WaitStop() error {
-	panic("unimplemented")
+	return nil
 }

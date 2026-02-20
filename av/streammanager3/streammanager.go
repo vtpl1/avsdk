@@ -37,6 +37,11 @@ type StreamManager struct {
 	cancel context.CancelFunc
 }
 
+// Start implements [av.StreamManager].
+func (m *StreamManager) Start(ctx context.Context) error {
+	panic("unimplemented")
+}
+
 // New returns a StreamManager that uses demuxerFactory to open sources and
 // demuxerRemover to clean them up. opts are applied in order after construction.
 func New(ctx context.Context, demuxerFactory av.DemuxerFactory, demuxerRemover av.DemuxerRemover, opts ...Option) *StreamManager {
