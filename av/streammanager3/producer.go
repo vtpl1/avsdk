@@ -2,186 +2,282 @@ package streammanager3
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/vtpl1/avsdk/av"
 )
 
-// Producer manages a single demuxer and fans its packets out to one or more consumers.
-// The demuxer is created lazily when the first consumer is added, and torn down when the
-// last consumer is removed.
 type Producer struct {
 	producerID     string
 	demuxerFactory av.DemuxerFactory
-	removeMe       av.ProducerRemover
+	demuxerRemover av.DemuxerRemover
 
-	mu        sync.RWMutex
-	consumers map[string]*consumer
-	// closing is set to true (under mu) when the last consumer is removed. Any
-	// concurrent AddConsumer call will see this flag and return errProducerClosing
-	// instead of re-using a producer that is already mid-teardown.
-	closing bool
+	cancel           context.CancelFunc
+	wg               sync.WaitGroup
+	mu               sync.RWMutex
+	alreadyClosing   atomic.Bool
+	started          atomic.Bool
+	consumers        map[string]*Consumer
+	consumersToStart chan *Consumer
 
-	demuxer av.DemuxCloser
-	streams []av.Stream
-
-	ctx    context.Context //nolint:containedctx
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	demuxer   av.DemuxCloser
+	streams   []av.Stream
+	codecsErr error
+	codecsCh  chan struct{}
 }
 
-// SignalStop implements [av.Stopper].
-func (p *Producer) SignalStop() bool {
-	if p.cancel != nil {
-		p.cancel()
+func (m *Producer) Close() error {
+	if !m.alreadyClosing.CompareAndSwap(false, true) {
+		return nil
 	}
 
-	return true
-}
-
-// Stop implements [av.Stopper].
-func (p *Producer) Stop() error {
-	p.SignalStop()
-
-	return p.WaitStop()
-}
-
-// WaitStop implements [av.Stopper].
-func (p *Producer) WaitStop() error {
-	p.wg.Wait()
+	if m.cancel != nil {
+		m.cancel()
+	}
+	m.wg.Wait()
 
 	return nil
 }
 
-// NewProducer creates a Producer that will use demuxerFactory to open the source on demand.
-// removeMe is called (with producerID) after the last consumer is removed and the demuxer
-// has been closed, allowing the caller to deregister the producer from any registry.
-// Pass nil for removeMe if no deregistration callback is needed.
-func NewProducer(ctx context.Context, producerID string, demuxerFactory av.DemuxerFactory, removeMe av.ProducerRemover) *Producer {
-	cCtx, cancel := context.WithCancel(ctx)
-
-	return &Producer{
-		producerID:     producerID,
-		demuxerFactory: demuxerFactory,
-		removeMe:       removeMe,
-		consumers:      make(map[string]*consumer),
-		ctx:            cCtx,
-		cancel:         cancel,
+func (m *Producer) GetCodecs(ctx context.Context) ([]av.Stream, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-m.codecsCh:
+		return m.streams, m.codecsErr
 	}
 }
 
-// AddConsumer opens a muxer via muxerFactory and attaches it to this producer.
-// If this is the first consumer, the demuxer is created and the read loop is started.
-// Errors from the muxer write loop are sent to errChan.
-// Returns errProducerClosing if the producer has already started tearing down.
-func (p *Producer) AddConsumer(ctx context.Context, producerID, consumerID string,
-	muxerFactory av.MuxerFactory,
-	muxerRemover av.MuxerRemover,
-	errChan chan<- error,
-) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (m *Producer) ReadPacket(ctx context.Context) (av.Packet, error) {
+	return m.demuxer.ReadPacket(ctx)
+}
 
-	// Reject new consumers if teardown has already begun.
-	if p.closing {
-		return errProducerClosing
+func NewProducer(producerID string,
+	demuxerFactory av.DemuxerFactory,
+	demuxerRemover av.DemuxerRemover,
+) *Producer {
+	m := &Producer{
+		producerID:       producerID,
+		demuxerFactory:   demuxerFactory,
+		demuxerRemover:   demuxerRemover,
+		consumersToStart: make(chan *Consumer),
+		codecsCh:         make(chan struct{}),
+		consumers:        make(map[string]*Consumer),
 	}
 
-	// Lazy demuxer init on first consumer.
-	isFirst := len(p.consumers) == 0
-	if isFirst {
-		dmx, err := p.demuxerFactory(ctx, producerID)
-		if err != nil {
-			return err
-		}
-		streams, err := dmx.GetCodecs(ctx)
-		if err != nil {
-			_ = dmx.Close()
+	return m
+}
 
-			return err
+func (m *Producer) ConsumerCount() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return len(m.consumers)
+}
+
+func (m *Producer) Start(ctx context.Context) error {
+	m.wg.Add(1)
+	sctx, cancel := context.WithCancel(ctx)
+	m.cancel = cancel
+	go func(ctx context.Context, cancel context.CancelFunc) {
+		defer m.wg.Done()
+		defer cancel()
+		m.started.Store(true)
+		demuxer, err := m.demuxerFactory(ctx, m.producerID)
+		if err != nil {
+			m.setLastCodecError(err)
+
+			return
 		}
-		p.demuxer = dmx
-		p.streams = streams
+		m.demuxer = demuxer
+		defer m.demuxer.Close()
+		defer func(ctx context.Context) {
+			if m.demuxerRemover != nil {
+				ctxDetached := context.WithoutCancel(ctx)
+				ctxTimeout, cancel := context.WithTimeout(ctxDetached, 5*time.Second)
+				defer cancel()
+				_ = m.demuxerRemover(ctxTimeout, m.producerID)
+			}
+		}(ctx)
+		defer func() {
+			m.mu.RLock()
+			inactive := make(map[string]*Consumer, len(m.consumers))
+			for consumerID, c := range m.consumers {
+				inactive[consumerID] = c
+			}
+			m.mu.RUnlock()
+
+			for _, c := range inactive {
+				_ = c.Close()
+			}
+
+			m.mu.Lock()
+			for consumerID := range m.consumers {
+				delete(m.consumers, consumerID)
+			}
+			m.mu.Unlock()
+		}()
+		streams, err := m.demuxer.GetCodecs(ctx)
+		if err != nil {
+			m.setLastCodecError(err)
+
+			return
+		}
+		m.mu.Lock()
+		m.streams = streams
+		close(m.codecsCh)
+		m.mu.Unlock()
+
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
+			m.readWriteLoop(ctx)
+		}()
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case c, ok := <-m.consumersToStart:
+				if !ok {
+					continue
+				}
+				_ = c.Start(ctx)
+			case <-ticker.C:
+				m.mu.RLock()
+				inactive := make(map[string]*Consumer, len(m.consumers))
+				for consumerID, c := range m.consumers {
+					if !c.inactive.Load() {
+						continue
+					}
+					inactive[consumerID] = c
+				}
+				m.mu.RUnlock()
+				for _, c := range inactive {
+					_ = c.Close()
+				}
+
+				m.mu.Lock()
+				for consumerID := range inactive {
+					delete(m.consumers, consumerID)
+				}
+				m.mu.Unlock()
+
+			case <-ctx.Done():
+				return
+			}
+		}
+	}(sctx, cancel)
+
+	return nil
+}
+
+func (m *Producer) readWriteLoop(ctx context.Context) {
+	FPS := 2500
+	fpsLimitTicker := time.NewTicker(time.Second / time.Duration(FPS))
+	defer fpsLimitTicker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-fpsLimitTicker.C:
+			pkt, err := m.ReadPacket(ctx)
+			if err != nil {
+				return
+			}
+			m.mu.RLock()
+			active := make(map[string]*Consumer, len(m.consumers))
+			for consumerID, c := range m.consumers {
+				if c.LastError() != nil {
+					continue
+				}
+				if c.inactive.Load() {
+					continue
+				}
+				active[consumerID] = c
+			}
+			m.mu.RUnlock()
+			for _, c := range active {
+				_ = c.WritePacket(ctx, pkt)
+			}
+		}
 	}
+}
 
-	mux, err := muxerFactory(ctx, producerID, consumerID)
+func (m *Producer) setLastCodecError(err error) {
+	if err == nil {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.codecsErr = err
+	close(m.codecsCh)
+}
+
+func (m *Producer) lastError() error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.codecsErr
+}
+
+func (m *Producer) AddConsumer(ctx context.Context, consumerID string, muxerFactory av.MuxerFactory, muxerRemover av.MuxerRemover, errChan chan<- error) error {
+	if m.alreadyClosing.Load() {
+		return ErrProducerClosing
+	}
+	if !m.started.Load() {
+		return ErrProducerNotStartedYet
+	}
+	if m.lastError() != nil {
+		return m.lastError()
+	}
+	m.mu.Lock()
+	_, existed := m.consumers[consumerID]
+	if existed {
+		m.mu.Unlock()
+		return ErrConsumerAlreadyExists
+	}
+	c := NewConsumer(consumerID, muxerFactory, muxerRemover, errChan)
+	m.consumers[consumerID] = c
+	m.mu.Unlock()
+	streams, err := m.GetCodecs(ctx)
 	if err != nil {
-		if isFirst {
-			_ = p.demuxer.Close()
-			p.demuxer = nil
-		}
+		c.setLastError(errors.Join(ErrCodecsNotAvailable, err))
 
 		return err
 	}
-
-	//nolint:contextcheck // p.ctx is intentional: the consumer must outlive the AddConsumer call.
-	c := newConsumer(p.ctx, consumerID, mux, muxerRemover, errChan)
-	// Wire auto-removal: when the write goroutine exits due to a muxer error it
-	// calls RemoveConsumer so the producer stops fanning packets to a dead sink.
-	// context.Background() is used so cleanup runs even if the caller's ctx is gone.
-	// A concurrent explicit RemoveConsumer for the same ID returns ErrConsumerNotFound,
-	// which is silently ignored here — both paths call the same stop() sequence.
-	c.onDead = func() { _ = p.RemoveConsumer(context.Background(), p.producerID, consumerID) }
-	if err = c.start(p.streams); err != nil {
-		_ = mux.Close()
-		if isFirst {
-			_ = p.demuxer.Close()
-			p.demuxer = nil
-		}
-
-		return err
+	select {
+	case <-ctx.Done():
+		c.inactive.Store(true)
+		return ErrProducerClosing
+	case m.consumersToStart <- c:
 	}
+	return c.WriteHeader(ctx, streams)
+}
 
-	p.consumers[consumerID] = c
-
-	// Start the read loop only after the first consumer is confirmed.
-	if isFirst {
-		p.wg.Add(1)
-		go p.runLoop()
+func (m *Producer) RemoveConsumer(ctx context.Context, consumerID string) error {
+	m.mu.RLock()
+	consumer, exists := m.consumers[consumerID]
+	m.mu.RUnlock()
+	if exists {
+		_ = consumer.Close()
 	}
 
 	return nil
 }
 
-// RemoveConsumer stops the consumer identified by consumerID and tears down its muxer.
-// When the last consumer is removed the demuxer is also closed and removeMe is called.
-func (p *Producer) RemoveConsumer(ctx context.Context, producerID, consumerID string) error {
-	p.mu.Lock()
-	c, ok := p.consumers[consumerID]
-	if !ok {
-		p.mu.Unlock()
-
-		return fmt.Errorf("%s: %w", consumerID, ErrConsumerNotFound)
+func (m *Producer) Pause(ctx context.Context) error {
+	if m.alreadyClosing.Load() {
+		return ErrProducerClosing
 	}
-	delete(p.consumers, consumerID)
-	empty := len(p.consumers) == 0
-	if empty {
-		// Signal closing before releasing the lock so that any concurrent AddConsumer
-		// that acquires the lock next sees the flag and returns errProducerClosing.
-		p.closing = true
+	if !m.started.Load() {
+		return ErrProducerNotStartedYet
 	}
-	p.mu.Unlock()
-
-	c.stop(ctx, producerID)
-
-	if empty {
-		p.cancel()
-		p.wg.Wait()
-		_ = p.demuxer.Close()
-		if p.removeMe != nil {
-			return p.removeMe(ctx, producerID)
-		}
-	}
-
-	return nil
-}
-
-// Pause pauses packet delivery if the underlying demuxer supports av.Pauser.
-func (p *Producer) Pause(ctx context.Context) error {
-	p.mu.RLock()
-	dmx := p.demuxer
-	p.mu.RUnlock()
+	m.mu.RLock()
+	dmx := m.demuxer
+	m.mu.RUnlock()
 	if pauser, ok := dmx.(av.Pauser); ok {
 		return pauser.Pause(ctx)
 	}
@@ -189,62 +285,19 @@ func (p *Producer) Pause(ctx context.Context) error {
 	return nil
 }
 
-// Resume resumes packet delivery if the underlying demuxer supports av.Pauser.
-func (p *Producer) Resume(ctx context.Context) error {
-	p.mu.RLock()
-	dmx := p.demuxer
-	p.mu.RUnlock()
+func (m *Producer) Resume(ctx context.Context) error {
+	if m.alreadyClosing.Load() {
+		return ErrProducerClosing
+	}
+	if !m.started.Load() {
+		return ErrProducerNotStartedYet
+	}
+	m.mu.RLock()
+	dmx := m.demuxer
+	m.mu.RUnlock()
 	if pauser, ok := dmx.(av.Pauser); ok {
 		return pauser.Resume(ctx)
 	}
 
 	return nil
-}
-
-// runLoop reads packets from the demuxer and fans each one out to all active consumers.
-// It exits when the producer context is cancelled or the demuxer returns an error.
-func (p *Producer) runLoop() {
-	defer p.wg.Done()
-
-	// Capture the demuxer under the read lock. p.demuxer is set before runLoop is
-	// started (inside AddConsumer while p.mu is held) and is never reassigned while
-	// the loop runs. Reading it under the lock satisfies the race detector, which
-	// cannot infer the happens-before relationship from goroutine creation alone.
-	p.mu.RLock()
-	dmx := p.demuxer
-	p.mu.RUnlock()
-
-	for {
-		pkt, err := dmx.ReadPacket(p.ctx)
-		if err != nil {
-			p.mu.RLock()
-			for _, c := range p.consumers {
-				select {
-				case c.errChan <- err:
-				default:
-				}
-			}
-			p.mu.RUnlock()
-
-			return
-		}
-
-		// Keep p.streams current so that consumers added after a mid-stream codec
-		// change receive the correct stream list in their WriteHeader call.
-		if pkt.NewCodecs != nil {
-			p.mu.Lock()
-			p.streams = pkt.NewCodecs
-			p.mu.Unlock()
-		}
-
-		p.mu.RLock()
-		for _, c := range p.consumers {
-			select {
-			case c.pktChan <- pkt:
-			default:
-				// Slow consumer: drop packet rather than blocking the read loop.
-			}
-		}
-		p.mu.RUnlock()
-	}
 }

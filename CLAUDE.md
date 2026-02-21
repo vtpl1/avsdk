@@ -133,7 +133,7 @@ if s, ok := dmx.(av.TimeSeeker); ok { s.SeekToTime(ctx, 30*time.Second) }
 ## Linting
 
 `.golangci.yml` enables 70+ linters. Key limits:
-- Line length: 160 characters (rulers in VS Code at 120 and 160)
+- Line length: 260 characters (rulers in VS Code at 160 and 260)
 - Function length: 110 lines / 70 statements
 - Cyclomatic complexity: 30 (cyclop), cognitive complexity: 50 (gocognit)
 

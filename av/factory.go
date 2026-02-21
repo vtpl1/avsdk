@@ -18,12 +18,12 @@ type DemuxerRemover func(ctx context.Context, producerID string) error
 // producerID identifies the source stream; consumerID identifies the downstream sink
 // (e.g. a recording session, a subscriber connection, or an output URL).
 // The caller is responsible for calling Close() on the returned MuxCloser when done.
-type MuxerFactory func(ctx context.Context, producerID, consumerID string) (MuxCloser, error)
+type MuxerFactory func(ctx context.Context, consumerID string) (MuxCloser, error)
 
 // MuxerRemover tears down a previously created muxer and deregisters it from any
 // internal registry. It must be called after Close() has been called on the MuxCloser.
 // producerID and consumerID must match the values used when the muxer was created.
-type MuxerRemover func(ctx context.Context, producerID, consumerID string) error
+type MuxerRemover func(ctx context.Context, consumerID string) error
 
 // ProducerRemover tears down a producer and deregisters it from any internal registry.
 // Unlike DemuxerRemover, which operates at the demuxer level, ProducerRemover operates

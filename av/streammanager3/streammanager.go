@@ -5,53 +5,52 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/vtpl1/avsdk/av"
 )
 
-// Sentinel errors returned by StreamManager and Producer methods.
 var (
-	ErrProducerNotFound = errors.New("producer not found")
-	ErrConsumerNotFound = errors.New("consumer not found")
+	ErrProducerNotFound           = errors.New("producer not found")
+	ErrProducerDemuxFactory       = errors.New("producer demux factory")
+	ErrConsumerNotFound           = errors.New("consumer not found")
+	ErrConsumerMuxFactory         = errors.New("consumer mux factory")
+	ErrStreamManagerClosing       = errors.New("stream manager closing")
+	ErrProducerClosing            = errors.New("producer closing")
+	ErrProducerLastError          = errors.New("producer last error")
+	ErrConsumerClosing            = errors.New("consumer closing")
+	ErrConsumerAlreadyExists      = errors.New("consumer already exists")
+	ErrCodecsNotAvailable         = errors.New("codecs not available")
+	ErrStreamManagerNotStartedYet = errors.New("stream manager not started yet")
+	ErrProducerNotStartedYet      = errors.New("producer not started yet")
+	ErrConsumerNotStartedYet      = errors.New("consumer not started yet")
+	ErrMuxerWritePacket           = errors.New("muxer write packet")
+	ErrMuxerWriteHeader           = errors.New("muxer write header")
 )
 
-// errProducerClosing is returned by Producer.AddConsumer when the producer has already
-// started tearing down (its last consumer was concurrently removed). AddConsumer detects
-// this and retries with a fresh producer rather than propagating the error to the caller.
-var errProducerClosing = errors.New("producer closing")
-
-// Option is a functional option for configuring a StreamManager.
 type Option func(*StreamManager)
 
-// StreamManager implements [av.StreamManager]. It lazily creates a [Producer] (and its
-// underlying demuxer) when the first consumer for a given producerID is added, and
-// tears it down when the last consumer for that producerID is removed.
 type StreamManager struct {
 	demuxerFactory av.DemuxerFactory
 	demuxerRemover av.DemuxerRemover
 
-	mu        sync.RWMutex
-	producers map[string]*Producer
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
+	mu             sync.RWMutex
+	alreadyClosing atomic.Bool
+	started        atomic.Bool
+	producers      map[string]*Producer
 
-	ctx    context.Context //nolint:containedctx
-	cancel context.CancelFunc
+	producersToStart chan *Producer
 }
 
-// Start implements [av.StreamManager].
-func (m *StreamManager) Start(ctx context.Context) error {
-	panic("unimplemented")
-}
-
-// New returns a StreamManager that uses demuxerFactory to open sources and
-// demuxerRemover to clean them up. opts are applied in order after construction.
-func New(ctx context.Context, demuxerFactory av.DemuxerFactory, demuxerRemover av.DemuxerRemover, opts ...Option) *StreamManager {
-	cCtx, cancel := context.WithCancel(ctx)
+func New(demuxerFactory av.DemuxerFactory, demuxerRemover av.DemuxerRemover, opts ...Option) *StreamManager {
 	m := &StreamManager{
-		demuxerFactory: demuxerFactory,
-		demuxerRemover: demuxerRemover,
-		producers:      make(map[string]*Producer),
-		ctx:            cCtx,
-		cancel:         cancel,
+		demuxerFactory:   demuxerFactory,
+		demuxerRemover:   demuxerRemover,
+		producers:        make(map[string]*Producer),
+		producersToStart: make(chan *Producer),
 	}
 	for _, o := range opts {
 		o(m)
@@ -60,48 +59,106 @@ func New(ctx context.Context, demuxerFactory av.DemuxerFactory, demuxerRemover a
 	return m
 }
 
-// AddConsumer implements [av.StreamManager].
-// If no live producer exists for producerID, one is created. If the producer found in
-// the map is concurrently shutting down (errProducerClosing), its stale map entry is
-// removed and the call retries with a fresh producer.
-// If creating the first consumer fails, the freshly created producer is removed from
-// the map.
-func (m *StreamManager) AddConsumer(ctx context.Context, producerID, consumerID string,
-	muxerFactory av.MuxerFactory,
-	muxerRemover av.MuxerRemover,
-	errChan chan<- error,
-) error {
+func (m *StreamManager) Start(ctx context.Context) error {
+	m.wg.Add(1)
+	sctx, cancel := context.WithCancel(ctx)
+	m.cancel = cancel
+
+	go func(sctx context.Context, cancel context.CancelFunc) {
+		defer m.wg.Done()
+		defer cancel()
+		defer func() {
+			m.mu.RLock()
+			inactive := make(map[string]*Producer, len(m.producers))
+			for producerID, p := range m.producers {
+				inactive[producerID] = p
+			}
+			m.mu.RUnlock()
+
+			for _, p := range inactive {
+				_ = p.Close()
+			}
+
+			m.mu.Lock()
+			for producerID := range m.producers {
+				delete(m.producers, producerID)
+			}
+			m.mu.Unlock()
+		}()
+		m.started.Store(true)
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				m.mu.RLock()
+				inactive := make(map[string]*Producer, len(m.producers))
+				for producerID, p := range m.producers {
+					if p.ConsumerCount() == 0 {
+						inactive[producerID] = p
+					}
+				}
+				m.mu.RUnlock()
+				for _, p := range inactive {
+					_ = p.Close()
+				}
+
+				m.mu.Lock()
+				for producerID := range inactive {
+					delete(m.producers, producerID)
+				}
+				m.mu.Unlock()
+			case <-sctx.Done():
+				return
+			case p, ok := <-m.producersToStart:
+				if ok {
+					err := p.Start(sctx)
+					if err != nil {
+						return
+					}
+				}
+			}
+		}
+	}(sctx, cancel)
+
+	return nil
+}
+
+func (m *StreamManager) AddConsumer(ctx context.Context, producerID string, consumerID string, muxerFactory av.MuxerFactory, muxerRemover av.MuxerRemover, errChan chan<- error) error {
+	if m.alreadyClosing.Load() {
+		return ErrStreamManagerClosing
+	}
+	if !m.started.Load() {
+		return ErrStreamManagerNotStartedYet
+	}
 	for {
 		m.mu.Lock()
 		p, existed := m.producers[producerID]
 		if !existed {
-			p = NewProducer(m.ctx, producerID, m.demuxerFactory, nil) //nolint:contextcheck
-			p.removeMe = m.makeProducerRemover(p, producerID)
+			p = NewProducer(producerID, m.demuxerFactory, m.demuxerRemover)
 			m.producers[producerID] = p
 		}
 		m.mu.Unlock()
+		if !existed {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case m.producersToStart <- p:
+			}
+		}
 
-		err := p.AddConsumer(ctx, producerID, consumerID, muxerFactory, muxerRemover, errChan)
-		if err != nil {
-			if errors.Is(err, errProducerClosing) {
-				// Producer is shutting down concurrently. Remove its stale map entry
-				// (if it is still there) and loop to get or create a fresh one.
-				m.mu.Lock()
-				if cur, ok := m.producers[producerID]; ok && cur == p {
-					delete(m.producers, producerID)
-				}
-				m.mu.Unlock()
+		if p.lastError() != nil {
+			return fmt.Errorf("%s: %w", producerID, errors.Join(ErrProducerLastError, p.lastError()))
+		}
 
+		if err := p.AddConsumer(ctx, consumerID, muxerFactory, muxerRemover, errChan); err != nil {
+			if errors.Is(err, ErrProducerClosing) {
+				time.Sleep(10 * time.Millisecond)
 				continue
 			}
-
-			if !existed {
-				// The producer was just created but its first consumer failed; remove it.
-				m.mu.Lock()
-				if cur, ok := m.producers[producerID]; ok && cur == p {
-					delete(m.producers, producerID)
-				}
-				m.mu.Unlock()
+			if errors.Is(err, ErrProducerNotStartedYet) {
+				time.Sleep(10 * time.Millisecond)
+				continue
 			}
 
 			return err
@@ -111,8 +168,7 @@ func (m *StreamManager) AddConsumer(ctx context.Context, producerID, consumerID 
 	}
 }
 
-// RemoveConsumer implements [av.StreamManager].
-func (m *StreamManager) RemoveConsumer(ctx context.Context, producerID, consumerID string) error {
+func (m *StreamManager) RemoveConsumer(ctx context.Context, producerID string, consumerID string) error {
 	m.mu.RLock()
 	p, ok := m.producers[producerID]
 	m.mu.RUnlock()
@@ -120,52 +176,16 @@ func (m *StreamManager) RemoveConsumer(ctx context.Context, producerID, consumer
 		return fmt.Errorf("%s: %w", producerID, ErrProducerNotFound)
 	}
 
-	return p.RemoveConsumer(ctx, producerID, consumerID)
+	return p.RemoveConsumer(ctx, consumerID)
 }
 
-// SignalStop implements [av.StreamManager].
-func (m *StreamManager) SignalStop() bool {
-	if m.cancel != nil {
-		m.cancel()
-	}
-
-	return true
-}
-
-// WaitStop implements [av.StreamManager]. It waits for all active producer goroutines
-// to finish. Call SignalStop (or Stop) first to trigger shutdown of the read loops.
-func (m *StreamManager) WaitStop() error {
-	// Snapshot the producer list so we can wait without holding the lock.
-	m.mu.RLock()
-	ps := make([]*Producer, 0, len(m.producers))
-	for _, p := range m.producers {
-		ps = append(ps, p)
-	}
-	m.mu.RUnlock()
-
-	for _, p := range ps {
-		_ = p.WaitStop()
-	}
-
-	return nil
-}
-
-// Stop implements [av.StreamManager].
-func (m *StreamManager) Stop() error {
-	m.SignalStop()
-
-	return m.WaitStop()
-}
-
-// GetActiveProducersCount implements [av.StreamManager].
-func (m *StreamManager) GetActiveProducersCount(_ context.Context) int {
+func (m *StreamManager) GetActiveProducersCount(ctx context.Context) int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	return len(m.producers)
 }
 
-// PauseProducer implements [av.StreamManager].
 func (m *StreamManager) PauseProducer(ctx context.Context, producerID string) error {
 	m.mu.RLock()
 	p, ok := m.producers[producerID]
@@ -177,7 +197,6 @@ func (m *StreamManager) PauseProducer(ctx context.Context, producerID string) er
 	return p.Pause(ctx)
 }
 
-// ResumeProducer implements [av.StreamManager].
 func (m *StreamManager) ResumeProducer(ctx context.Context, producerID string) error {
 	m.mu.RLock()
 	p, ok := m.producers[producerID]
@@ -189,22 +208,28 @@ func (m *StreamManager) ResumeProducer(ctx context.Context, producerID string) e
 	return p.Resume(ctx)
 }
 
-// makeProducerRemover returns a ProducerRemover that only removes p from the map when
-// it is still the current entry for producerID. The identity check prevents a closing
-// producer from inadvertently evicting a replacement producer that was registered while
-// the closing producer's teardown was still in progress.
-func (m *StreamManager) makeProducerRemover(p *Producer, producerID string) av.ProducerRemover {
-	return func(ctx context.Context, _ string) error {
-		m.mu.Lock()
-		if cur, ok := m.producers[producerID]; ok && cur == p {
-			delete(m.producers, producerID)
-		}
-		m.mu.Unlock()
+func (m *StreamManager) SignalStop() bool {
+	if !m.alreadyClosing.CompareAndSwap(false, true) {
+		return false
+	}
 
-		if m.demuxerRemover != nil {
-			return m.demuxerRemover(ctx, producerID)
-		}
+	if m.cancel != nil {
+		m.cancel()
+	}
 
+	return true
+}
+
+func (m *StreamManager) WaitStop() error {
+	m.wg.Wait()
+
+	return nil
+}
+
+func (m *StreamManager) Stop() error {
+	if !m.SignalStop() {
 		return nil
 	}
+
+	return m.WaitStop()
 }
